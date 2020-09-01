@@ -6,12 +6,14 @@ ScriptsOnlyBuild:
     - BoardManager
     - InputManager
     - OnDragEvent
+    - QuitApplicationButton
     UnityEditor.TestRunner.dll:
     - UnityEditor.TestTools.TestRunner.TestListCacheData
     UnityEngine.UI.dll:
     - UnityEngine.EventSystems.EventSystem
     - UnityEngine.EventSystems.EventTrigger
     - UnityEngine.EventSystems.StandaloneInputModule
+    - UnityEngine.UI.Button
     - UnityEngine.UI.CanvasScaler
     - UnityEngine.UI.GraphicRaycaster
     - UnityEngine.UI.GridLayoutGroup
@@ -45,6 +47,8 @@ ScriptsOnlyBuild:
     - Class: 114
       Script: {instanceID: 9294}
     - Class: 114
+      Script: {instanceID: 9330}
+    - Class: 114
       Script: {instanceID: 9332}
     - Class: 114
       Script: {instanceID: 9338}
@@ -68,6 +72,8 @@ ScriptsOnlyBuild:
       Script: {instanceID: 9956}
     - Class: 114
       Script: {instanceID: 10162}
+    - Class: 114
+      Script: {instanceID: 20170}
     - Class: 115
       Script: {instanceID: 0}
     - Class: 128
@@ -763,7 +769,13 @@ ScriptsOnlyBuild:
     assemblyName: Unity.Timeline.dll
     namespaceName: UnityEngine.Timeline
     className: PlayableTrack
+  - hash:
+      serializedVersion: 2
+      Hash: 71bb6a6b6c8f052f948db64c7dd3ca4f
+    assemblyName: Assembly-CSharp.dll
+    namespaceName: 
+    className: QuitApplicationButton
   platform: 19
   scenePathNames:
   - Assets/Scenes/SampleScene.unity
-  playerPath: C:/Users/Public/Documents/Neil2.2/ody/3D jew/3Matches/3D jew.exe
+  playerPath: C:/Users/Public/Documents/Neil2.2/ody/3D jew/3MatchesExecutable/3D jew.exe
