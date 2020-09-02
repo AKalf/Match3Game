@@ -60,12 +60,15 @@
      <Compile Include="Assets\AlexToolScripts\DebugMessage.cs" />
      <Compile Include="Assets\Animations.cs" />
      <Compile Include="Assets\BoardElement.cs" />
+     <Compile Include="Assets\BoardFunctions.cs" />
      <Compile Include="Assets\BoardManager.cs" />
+     <Compile Include="Assets\GraphBoardDepricated.cs" />
      <Compile Include="Assets\InputManager.cs" />
      <Compile Include="Assets\OnDragEvent.cs" />
      <Compile Include="Assets\QuitApplicationButton.cs" />
      <Compile Include="Assets\RaycastOnClick.cs" />
      <Compile Include="Assets\SerializedAction.cs" />
+     <Compile Include="Assets\Server.cs" />
  <Reference Include="Unity.Timeline.Editor">
  <HintPath>C:/Users/Public/Documents/Neil2.2/ody/3D jew/Library/ScriptAssemblies/Unity.Timeline.Editor.dll</HintPath>
  </Reference>

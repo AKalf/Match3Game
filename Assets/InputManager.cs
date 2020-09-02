@@ -52,28 +52,23 @@ public class InputManager : MonoBehaviour {
         }
         if (firstCell == null) {
             firstCell = cell;
+            return;
         }
         else if (secondCell == null && firstCell != cell) {
             secondCell = cell;
-            BoardElement firstElement = firstCell.GetComponent<BoardElement>();
-            BoardElement secondElement = secondCell.GetComponent<BoardElement>();
-            if (BoardManager.GetInstance().GetIfNeighbours(firstElement, secondElement)) {
-                Debug.Log("Correct input: " + firstCell.name + ", with " + secondCell.name);
-
-
-                BoardManager.GetInstance().SwapElements(firstElement, secondElement, rewire : false);
-
-                firstCell = null;
-                secondCell = null;
-            }
-            else {
-                BoardManager.GetInstance().SwapElements(firstCell.GetComponent<BoardElement>(), secondCell.GetComponent<BoardElement>(), rewire : true);
-                firstCell = null;
-                secondCell = null;
-            }
+            BoardManager.inst.HandleInput(GetIndexInParent(firstCell.transform), GetIndexInParent(secondCell.transform));
             //Debug.Log("Swapping: " + firstCell.transform.name + " with " + secondCell.transform.name);
-
         }
+        firstCell = null;
+        secondCell = null;
+    }
+    public int GetIndexInParent(Transform trans) {
+        for (int i = 0; i < trans.parent.childCount; i++) {
+            if (trans.parent.GetChild(i) == trans) {
+                return i;
+            }
+        }
+        return -1;
     }
 
 

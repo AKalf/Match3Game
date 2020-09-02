@@ -8,11 +8,11 @@ public class BoardElement : MonoBehaviour {
     // public BoardElement rightNeighbour = null;
     // public BoardElement leftNeighbour = null;
     public int childIndex = -1;
-    public Color color;
+    public Color color = Color.black;
 
 
     // Start is called before the first frame update
-    void Start() {
+    void Awake() {
         color = GetComponent<UnityEngine.UI.Image>().color;
     }
 
