@@ -5,12 +5,13 @@ using UnityEngine;
 
 public class AlexDebuggerWindow : EditorWindow {
 
-    Dictionary<string, List<string>> tagsAndMessages = new Dictionary<string, List<string>>();
-    Dictionary<string, bool> tagsFoldouts = new Dictionary<string, bool>();
+    Dictionary<AlexDebugger.tags, List<string>> tagsAndMessages = new Dictionary<AlexDebugger.tags, List<string>>();
+    Dictionary<AlexDebugger.tags, bool> tagsFoldouts = new Dictionary<AlexDebugger.tags, bool>();
 
     bool hasInit = false;
 
-    private Dictionary<string, Vector2> scrollPos;
+    private Dictionary<AlexDebugger.tags, Vector2> scrollPos;
+    Vector2 messagScroll = new Vector2();
 
     [MenuItem("Tools/AlexDebugger")]
     static void ShowWindow() {
@@ -21,10 +22,10 @@ public class AlexDebuggerWindow : EditorWindow {
     }
     void OnGUI() {
         if (!hasInit) {
-            tagsAndMessages = new Dictionary<string, List<string>>();
-            tagsFoldouts = new Dictionary<string, bool>();
-            scrollPos = new Dictionary<string, Vector2>();
-            scrollPos.Add("foldouts", Vector2.zero);
+            tagsAndMessages = new Dictionary<AlexDebugger.tags, List<string>>();
+            tagsFoldouts = new Dictionary<AlexDebugger.tags, bool>();
+            scrollPos = new Dictionary<AlexDebugger.tags, Vector2>();
+            //scrollPos.Add("foldouts", Vector2.zero);
             foreach (DebugMessage msg in AlexDebugger.GetInstance().messages) {
                 if (tagsAndMessages.ContainsKey(msg.tag) == false) {
                     if (msg.obj != null) {
@@ -42,8 +43,8 @@ public class AlexDebuggerWindow : EditorWindow {
             hasInit = true;
         }
         else {
-            scrollPos["foldouts"] = EditorGUILayout.BeginScrollView(scrollPos["foldouts"], false, false);
-            foreach (string tag in tagsAndMessages.Keys) {
+            messagScroll = EditorGUILayout.BeginScrollView(messagScroll, false, false);
+            foreach (AlexDebugger.tags tag in tagsAndMessages.Keys) {
                 EditorGUILayout.BeginHorizontal();
                 tagsFoldouts[tag] = EditorGUILayout.Foldout(tagsFoldouts[tag], "Show debug for tag: " + tag);
                 if (tagsFoldouts[tag]) {
@@ -51,7 +52,7 @@ public class AlexDebuggerWindow : EditorWindow {
                 }
                 EditorGUILayout.EndHorizontal();
             }
-            foreach (string tag in tagsFoldouts.Keys) {
+            foreach (AlexDebugger.tags tag in tagsFoldouts.Keys) {
                 if (tagsFoldouts[tag] == true) {
                     scrollPos[tag] = EditorGUILayout.BeginScrollView(scrollPos[tag], false, false);
                     foreach (string message in tagsAndMessages[tag]) {

@@ -138,13 +138,13 @@ public static class BoardFunctions {
                 matchedElemPositions[startCollum, startRow] = true;
                 for (int row = startRow - upperMatches; row <= startRow + bottomMatches; row++) {
                     matchedElemPositions[startCollum, row] = true;
-                    AlexDebugger.GetInstance().AddMessage(positions[startCollum, row].name + "is an " + ((row < startRow) ? " on top" : "on bottom") + " match of " + positions[startCollum, row].name, "Matches");
+                    AlexDebugger.GetInstance().AddMessage(positions[startCollum, row].name + "is an " + ((row < startRow) ? " on top" : "on bottom") + " match of " + positions[startCollum, row].name, AlexDebugger.tags.Matches);
                 }
                 if (upperMatches > 0) {
-                    AlexDebugger.GetInstance().AddMessage("Upper matches for element: " + positions[startCollum, startRow].name + " are: " + upperMatches, "Matches");
+                    AlexDebugger.GetInstance().AddMessage("Upper matches for element: " + positions[startCollum, startRow].name + " are: " + upperMatches, AlexDebugger.tags.Matches);
                 }
                 if (bottomMatches > 0) {
-                    AlexDebugger.GetInstance().AddMessage("Bottom matches for element: " + positions[startCollum, startRow].name + " are: " + bottomMatches, "Matches");
+                    AlexDebugger.GetInstance().AddMessage("Bottom matches for element: " + positions[startCollum, startRow].name + " are: " + bottomMatches, AlexDebugger.tags.Matches);
                 }
             }
             // if more than 2 element matches, add horizontal mathced elements
@@ -154,15 +154,15 @@ public static class BoardFunctions {
                     matchedElemPositions[collum, startRow] = true;
                 }
                 if (leftMatches > 0) {
-                    AlexDebugger.GetInstance().AddMessage("Left matches for element: " + positions[startCollum, startRow].name + " are: " + leftMatches, "Matches");
+                    AlexDebugger.GetInstance().AddMessage("Left matches for element: " + positions[startCollum, startRow].name + " are: " + leftMatches, AlexDebugger.tags.Matches);
                 }
                 if (rightMatches > 0) {
-                    AlexDebugger.GetInstance().AddMessage("Bottom matches for element: " + positions[startCollum, startRow].name + " are: " + rightMatches, "Matches");
+                    AlexDebugger.GetInstance().AddMessage("Bottom matches for element: " + positions[startCollum, startRow].name + " are: " + rightMatches, AlexDebugger.tags.Matches);
                 }
             }
         }
         if (upperMatches + bottomMatches >= 2 || leftMatches + rightMatches >= 2) {
-            AlexDebugger.GetInstance().AddMessage("Total matches found for: " + positions[startCollum, startRow].name + " are: " + upperMatches + bottomMatches + leftMatches + rightMatches, "Matches");
+            AlexDebugger.GetInstance().AddMessage("Total matches found for: " + positions[startCollum, startRow].name + " are: " + upperMatches + bottomMatches + leftMatches + rightMatches, AlexDebugger.tags.Matches);
             return upperMatches + bottomMatches + leftMatches + rightMatches;
         }
         else {
@@ -175,7 +175,7 @@ public static class BoardFunctions {
         int collumn, int row,
         ref BoardElement[, ] positions, ref bool[, ] matchedElemPositions, ref bool[, ] positionsDestroyed,
         ref List<AnimationMessage> playingAnimations, float swappingSpeed) {
-        AlexDebugger.GetInstance().AddMessage("####### Moving upwards " + positions[collumn, row].name + ", elements", "UpawardMovement");
+        AlexDebugger.GetInstance().AddMessage("####### Moving upwards " + positions[collumn, row].name + ", elements", AlexDebugger.tags.UpwardMovement);
         // swap with next non matched element on the collum if not on top of collum
         if (row != 0) {
             for (int i = row - 1; i > -1; i--) {
@@ -209,7 +209,7 @@ public static class BoardFunctions {
         if (maxScorePossible > maxScoreAllowed) {
             Debug.LogError("CurrentMaxScorePossible: " + maxScorePossible + " exceeds maxScoreAllowed: " + maxScorePossible);
         }
-        AlexDebugger.GetInstance().AddMessage("Replacing " + positions[collum, row], "Effects");
+        AlexDebugger.GetInstance().AddMessage("Replacing " + positions[collum, row], AlexDebugger.tags.Effects);
         positions[collum, row].GetComponent<UnityEngine.UI.Image>().color = positions[collum, row].color;
         Vector3 originalPos = positions[collum, row].transform.position;
         positions[collum, row].transform.position = holders[collum].position;
@@ -223,7 +223,7 @@ public static class BoardFunctions {
 
     /// <summary>Play scale-to-zero effect on element's transform</summary>
     public static void PlayMatchEffect(int collum, int row, BoardElement[, ] positions, ref List<AnimationMessage> playingAnimations, float swappingSpeed) {
-        AlexDebugger.GetInstance().AddMessage("####### Scale to zero effect for " + positions[collum, row].name, "Effects");
+        AlexDebugger.GetInstance().AddMessage("####### Scale to zero effect for " + positions[collum, row].name, AlexDebugger.tags.Effects);
         //Animations.Animation scaleToZero = Animations.AddAnimationScaleToZero(positions[collum, row].transform, swappingSpeed);
         playingAnimations.Add(new AnimationMessage(Animations.AnimationTypes.ScaleToZero, positions[collum, row].childIndex, swappingSpeed));
 
@@ -231,7 +231,7 @@ public static class BoardFunctions {
 
     /// <summary>Checks each element on the board for matches and flags them</summary>
     public static int CheckBoardForMatches(BoardElement[, ] positions, ref bool[, ] matchedElemPositions, int collumsNumber, int rowsNumber) {
-        AlexDebugger.GetInstance().AddMessage("####### Checking after-match...", "AfterMatch");
+        AlexDebugger.GetInstance().AddMessage("####### Checking after-match...", AlexDebugger.tags.Aftermatch);
         int totalMatches = 0;
         // Search for matches and flag them
         for (int row = 0; row < positions.GetLength(0); row++) {

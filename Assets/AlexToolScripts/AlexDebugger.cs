@@ -12,10 +12,21 @@ public class AlexDebugger : ScriptableObject {
     static AlexDebugger instance;
 
     [SerializeField]
-    public List<string> tags = new List<string>();
+    public enum tags {
+        Swap,
+        Matches,
+        UpwardMovement,
+        Aftermatch,
+        Effects,
+        Input,
+        Step1,
+        Step2,
+        Step3,
+        Step4
+    }
 
     [SerializeField]
-    public List<string> ignoredTag = new List<string>();
+    public List<tags> ignoredTag = new List<tags>();
 
     [SerializeField]
     public List<DebugMessage> messages = new List<DebugMessage>();
@@ -39,18 +50,16 @@ public class AlexDebugger : ScriptableObject {
         return instance;
     }
 
-    public void AddMessage(string msg, string tag, Object trigger = null) {
+    public void AddMessage(string msg, tags tag, Object trigger = null) {
         if (ignoredTag.Contains(tag)) {
             return;
         }
-        DebugMessage dMsg = new DebugMessage(msg, tag, trigger);
+        DebugMessage dMsg = new DebugMessage(msg + "    [" + Time.realtimeSinceStartup + "]", tag, trigger);
 
         dMsg.name = dMsg.tag + "(" + dMsg.GetHashCode() + ")";
 
         //UnityEditor.AssetDatabase.CreateAsset(dMsg, "Assets/AlexScripts/AlexToolScripts/Resources/" + dMsg.name + ".asset");
-        if (!tags.Contains(tag)) {
-            tags.Add(tag);
-        }
+
         messages.Add(dMsg);
     }
 
@@ -61,7 +70,7 @@ public class AlexDebugger : ScriptableObject {
     }
 
     //[Sirenix.OdinInspector.Button]
-    public void ClearMessagesForTag(string tag) {
+    public void ClearMessagesForTag(tags tag) {
 
         bool hasFoundAsset = false;
         for (int i = 0; i < messages.Count; i++) {
