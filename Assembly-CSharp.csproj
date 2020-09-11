@@ -11,7 +11,7 @@
     <ProductVersion>10.0.20506</ProductVersion>
     <SchemaVersion>2.0</SchemaVersion>
     <RootNamespace></RootNamespace>
-    <ProjectGuid>{CFB8D338-807E-22F6-8D03-ABD81456063C}</ProjectGuid>
+    <ProjectGuid>{11CBA6AF-65BE-7263-0E81-8E0D4ED58B9B}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <AssemblyName>Assembly-CSharp</AssemblyName>
@@ -59,36 +59,39 @@
      <Compile Include="Assets\AlexToolScripts\AlexDebuggerTags.cs" />
      <Compile Include="Assets\AlexToolScripts\DebugMessage.cs" />
      <Compile Include="Assets\Animations.cs" />
-     <Compile Include="Assets\BoardElement.cs" />
-     <Compile Include="Assets\BoardFunctions.cs" />
-     <Compile Include="Assets\BoardManager.cs" />
+     <Compile Include="Assets\AssetLoader.cs" />
+     <Compile Include="Assets\BoardScripts\BoardElement.cs" />
+     <Compile Include="Assets\BoardScripts\BoardFunctions.cs" />
+     <Compile Include="Assets\BoardScripts\BoardManager.cs" />
+     <Compile Include="Assets\BoardScripts\DetailsManager.cs" />
+     <Compile Include="Assets\BoardScripts\MoneyManager.cs" />
      <Compile Include="Assets\GraphBoardDepricated.cs" />
-     <Compile Include="Assets\InputManager.cs" />
-     <Compile Include="Assets\OnDragEvent.cs" />
-     <Compile Include="Assets\QuitApplicationButton.cs" />
-     <Compile Include="Assets\RaycastOnClick.cs" />
-     <Compile Include="Assets\SerializedAction.cs" />
+     <Compile Include="Assets\InteractionScripts\InputManager.cs" />
+     <Compile Include="Assets\InteractionScripts\OnDragEvent.cs" />
+     <Compile Include="Assets\InteractionScripts\QuitApplicationButton.cs" />
+     <Compile Include="Assets\InteractionScripts\RaycastOnClick.cs" />
+     <Compile Include="Assets\InteractionScripts\SerializedAction.cs" />
      <Compile Include="Assets\Server.cs" />
  <Reference Include="Unity.Timeline.Editor">
- <HintPath>C:/Users/Public/Documents/Neil2.2/ody/3D jew/Library/ScriptAssemblies/Unity.Timeline.Editor.dll</HintPath>
+ <HintPath>C:/Users/ALEX/Documents/Unity Projects/Match3Game/Library/ScriptAssemblies/Unity.Timeline.Editor.dll</HintPath>
  </Reference>
  <Reference Include="Unity.TextMeshPro.Editor">
- <HintPath>C:/Users/Public/Documents/Neil2.2/ody/3D jew/Library/ScriptAssemblies/Unity.TextMeshPro.Editor.dll</HintPath>
+ <HintPath>C:/Users/ALEX/Documents/Unity Projects/Match3Game/Library/ScriptAssemblies/Unity.TextMeshPro.Editor.dll</HintPath>
  </Reference>
  <Reference Include="Unity.PackageManagerUI.Editor">
- <HintPath>C:/Users/Public/Documents/Neil2.2/ody/3D jew/Library/ScriptAssemblies/Unity.PackageManagerUI.Editor.dll</HintPath>
+ <HintPath>C:/Users/ALEX/Documents/Unity Projects/Match3Game/Library/ScriptAssemblies/Unity.PackageManagerUI.Editor.dll</HintPath>
  </Reference>
  <Reference Include="Unity.Timeline">
- <HintPath>C:/Users/Public/Documents/Neil2.2/ody/3D jew/Library/ScriptAssemblies/Unity.Timeline.dll</HintPath>
+ <HintPath>C:/Users/ALEX/Documents/Unity Projects/Match3Game/Library/ScriptAssemblies/Unity.Timeline.dll</HintPath>
  </Reference>
  <Reference Include="Unity.CollabProxy.Editor">
- <HintPath>C:/Users/Public/Documents/Neil2.2/ody/3D jew/Library/ScriptAssemblies/Unity.CollabProxy.Editor.dll</HintPath>
+ <HintPath>C:/Users/ALEX/Documents/Unity Projects/Match3Game/Library/ScriptAssemblies/Unity.CollabProxy.Editor.dll</HintPath>
  </Reference>
  <Reference Include="Unity.TextMeshPro">
- <HintPath>C:/Users/Public/Documents/Neil2.2/ody/3D jew/Library/ScriptAssemblies/Unity.TextMeshPro.dll</HintPath>
+ <HintPath>C:/Users/ALEX/Documents/Unity Projects/Match3Game/Library/ScriptAssemblies/Unity.TextMeshPro.dll</HintPath>
  </Reference>
  <Reference Include="Unity.Analytics.DataPrivacy">
- <HintPath>C:/Users/Public/Documents/Neil2.2/ody/3D jew/Library/ScriptAssemblies/Unity.Analytics.DataPrivacy.dll</HintPath>
+ <HintPath>C:/Users/ALEX/Documents/Unity Projects/Match3Game/Library/ScriptAssemblies/Unity.Analytics.DataPrivacy.dll</HintPath>
  </Reference>
  <Reference Include="UnityEngine.AIModule">
  <HintPath>C:/Program Files/Unity/Hub/Editor/2019.1.5f1/Editor/Data/Managed/UnityEngine/UnityEngine.AIModule.dll</HintPath>
@@ -274,13 +277,13 @@
  <HintPath>C:/Program Files/Unity/Hub/Editor/2019.1.5f1/Editor/Data/UnityExtensions/Unity/TestRunner/net35/unity-custom/nunit.framework.dll</HintPath>
  </Reference>
  <Reference Include="Unity.Analytics.Editor">
- <HintPath>C:/Users/Public/Documents/Neil2.2/ody/3D jew/Library/PackageCache/com.unity.analytics@3.3.2/Unity.Analytics.Editor.dll</HintPath>
+ <HintPath>C:/Users/ALEX/Documents/Unity Projects/Match3Game/Library/PackageCache/com.unity.analytics@3.3.2/Unity.Analytics.Editor.dll</HintPath>
  </Reference>
  <Reference Include="Unity.Analytics.StandardEvents">
- <HintPath>C:/Users/Public/Documents/Neil2.2/ody/3D jew/Library/PackageCache/com.unity.analytics@3.3.2/Unity.Analytics.StandardEvents.dll</HintPath>
+ <HintPath>C:/Users/ALEX/Documents/Unity Projects/Match3Game/Library/PackageCache/com.unity.analytics@3.3.2/Unity.Analytics.StandardEvents.dll</HintPath>
  </Reference>
  <Reference Include="Unity.Analytics.Tracker">
- <HintPath>C:/Users/Public/Documents/Neil2.2/ody/3D jew/Library/PackageCache/com.unity.analytics@3.3.2/Unity.Analytics.Tracker.dll</HintPath>
+ <HintPath>C:/Users/ALEX/Documents/Unity Projects/Match3Game/Library/PackageCache/com.unity.analytics@3.3.2/Unity.Analytics.Tracker.dll</HintPath>
  </Reference>
  <Reference Include="netstandard">
  <HintPath>C:/Program Files/Unity/Hub/Editor/2019.1.5f1/Editor/Data/NetStandard/ref/2.0.0/netstandard.dll</HintPath>

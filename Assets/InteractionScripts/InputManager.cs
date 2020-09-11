@@ -2,7 +2,8 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public class InputManager : MonoBehaviour {
+public class InputManager : MonoBehaviour
+{
 
 
     private GameObject firstCell;
@@ -17,11 +18,14 @@ public class InputManager : MonoBehaviour {
 
     private static InputManager instance = null;
     // Start is called before the first frame update
-    void Awake() {
-        if (instance == null) {
+    void Awake()
+    {
+        if (instance == null)
+        {
             instance = this;
         }
-        else {
+        else
+        {
             Destroy(instance);
             instance = this;
         }
@@ -31,30 +35,37 @@ public class InputManager : MonoBehaviour {
         secondCell = null;
 
     }
-    public static InputManager GetInstance() {
+    public static InputManager GetInstance()
+    {
         return instance;
     }
 
     // Update is called once per frame
-    void Update() {
+    void Update()
+    {
 
 
     }
 
 
-    public void HandleInputForCell(GameObject cell) {
+    public void HandleInputForCell(GameObject cell)
+    {
         //Debug.Log("Input cell: " + cell.gameObject.name);
-        if (!BoardManager.GetInstance().IsAvailable() || cell == null) {
+        if (!BoardManager.GetInstance().IsAvailable() || cell == null)
+        {
             return;
         }
-        else if (cell.GetComponent<BoardElement>() == null) {
+        else if (cell.tag != "Cell")
+        {
             return;
         }
-        if (firstCell == null) {
+        if (firstCell == null)
+        {
             firstCell = cell;
             return;
         }
-        else if (secondCell == null && firstCell != cell) {
+        else if (secondCell == null && firstCell != cell)
+        {
             secondCell = cell;
             BoardManager.inst.HandleInput(GetIndexInParent(firstCell.transform), GetIndexInParent(secondCell.transform));
             //Debug.Log("Swapping: " + firstCell.transform.name + " with " + secondCell.transform.name);
@@ -62,9 +73,12 @@ public class InputManager : MonoBehaviour {
         firstCell = null;
         secondCell = null;
     }
-    public int GetIndexInParent(Transform trans) {
-        for (int i = 0; i < trans.parent.childCount; i++) {
-            if (trans.parent.GetChild(i) == trans) {
+    public int GetIndexInParent(Transform trans)
+    {
+        for (int i = 0; i < trans.parent.childCount; i++)
+        {
+            if (trans.parent.GetChild(i) == trans)
+            {
                 return i;
             }
         }
