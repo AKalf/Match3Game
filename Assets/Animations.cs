@@ -6,10 +6,10 @@ public class Animations : MonoBehaviour {
 
     private static float movingSpeed = 0.2f;
 
-
-    public enum AnimationTypes { ScaleToZero, MoveTo, ScaleToOne }
+    public enum AnimationTypes { ScaleToZero, MoveTo, ScaleToOne, ChangeSprite }
 
     public static Dictionary<Transform, List<Animation>> animatedTransforms = new Dictionary<Transform, List<Animation>>();
+
     private static Animation currentAnimation = null;
     List<Transform> toRemove = new List<Transform>();
 
@@ -31,6 +31,7 @@ public class Animations : MonoBehaviour {
             animatedTransforms.Add(transfromToScale, new List<Animation>());
         }
         Animation anim = new Animation(transfromToScale, speed, AnimationTypes.ScaleToZero, Vector3.zero);
+
         //transfromToScale.GetComponent<BoardElement>().AddAnimationToPlay(anim);
         animatedTransforms[transfromToScale].Add(anim);
         return anim;
@@ -44,7 +45,16 @@ public class Animations : MonoBehaviour {
         }
         Animation anim = new Animation(transfromToScale, speed, AnimationTypes.ScaleToOne, Vector3.one);
         animatedTransforms[transfromToScale].Add(anim);
+        // transfromToScale.GetComponent<BoardElement>().AddAnimationToPlay(anim);
+        return anim;
+    }
 
+    public static Animation AddAnimationChangeSprite(Transform imageComponentTranform, Sprite targetSprite, Color targetColor) {
+        if (animatedTransforms.ContainsKey(imageComponentTranform) == false) {
+            animatedTransforms.Add(imageComponentTranform, new List<Animation>());
+        }
+        Animation anim = new Animation(imageComponentTranform, targetSprite, targetColor);
+        animatedTransforms[imageComponentTranform].Add(anim);
         // transfromToScale.GetComponent<BoardElement>().AddAnimationToPlay(anim);
         return anim;
     }
@@ -70,6 +80,12 @@ public class Animations : MonoBehaviour {
         trans.position = Vector3.Lerp(trans.position, target, speed);
     }
 
+    private static void ChangeSprite(Transform boardElementGameObject, Sprite targetSprite, Color targetColor) {
+        UnityEngine.UI.Image targetImageComponent = boardElementGameObject.GetChild(0).GetComponent<UnityEngine.UI.Image>();
+        targetImageComponent.sprite = targetSprite;
+        targetImageComponent.color = targetColor;
+    }
+
     public static void SetAnimationMessages(AnimationMessage[] messages) {
         for (int i = 0; i < messages.Length; i++) {
             switch (messages[i].type) {
@@ -82,6 +98,9 @@ public class Animations : MonoBehaviour {
                 case AnimationTypes.ScaleToZero:
                     AddAnimationScaleToZero(inst.gamePanel.GetChild(messages[i].childIndex), movingSpeed);
                     break;
+                case AnimationTypes.ChangeSprite:
+                    AddAnimationChangeSprite(inst.gamePanel.GetChild(messages[i].childIndex), messages[i].targetSprite, messages[i].targetColor);
+                    break;
             }
         }
         shouldPlayAnimations = true;
@@ -90,21 +109,28 @@ public class Animations : MonoBehaviour {
     private void Awake() {
         inst = this;
     }
+
     private void Update() {
+
         if (animatedTransforms.Keys.Count > 0 && shouldPlayAnimations) {
 
             foreach (Transform trans in animatedTransforms.Keys) {
                 currentAnimation = animatedTransforms[trans][0];
                 if (currentAnimation.hasFinished) {
                     //Debug.Log("----- Animation finished: " + currentAnimation.animationType + " for transform: " + currentAnimation.transform.name);
+                    AlexDebugger.GetInstance().AddMessage("Animation finished: " + currentAnimation.animationType + " for transfrom " + currentAnimation.transform.name, AlexDebugger.tags.Animations);
+                    if (currentAnimation.speed > 5000) {
+                        AlexDebugger.GetInstance().AddMessage("Transfrom " + currentAnimation.transform.name + " moved to holders position", AlexDebugger.tags.Animations);
+                    }
                     animatedTransforms[currentAnimation.transform].Remove(currentAnimation);
                     if (animatedTransforms[currentAnimation.transform].Count < 1) {
                         toRemove.Add(trans);
                     }
-                    currentAnimation = null;
+
                 }
                 else {
                     PlayAnimation(currentAnimation);
+                    // break;
                 }
             }
             if (toRemove.Count > 0) {
@@ -120,15 +146,15 @@ public class Animations : MonoBehaviour {
 
         }
     }
-    private Animation CheckIfTransformIsAnimated(Animation animToPlay) {
-        foreach (Animation anim in animatedTransforms[animToPlay.transform]) {
-            if (anim.isPlaying && anim != animToPlay) {
-                return anim;
-            }
-        }
-        return animToPlay;
+    // private Animation CheckIfTransformIsAnimated(Animation animToPlay) {
+    //     foreach (Animation anim in animatedTransforms[animToPlay.transform]) {
+    //         if (anim.isPlaying && anim != animToPlay) {
+    //             return anim;
+    //         }
+    //     }
+    //     return animToPlay;
 
-    }
+    // }
     public void PlayAnimation(Animations.Animation animToPlay) {
         switch (animToPlay.animationType) {
             case AnimationTypes.ScaleToZero:
@@ -159,6 +185,12 @@ public class Animations : MonoBehaviour {
                     animToPlay.hasFinished = true;
                     animToPlay.transform.position = animToPlay.target;
                 }
+                break;
+            case AnimationTypes.ChangeSprite:
+                animToPlay.isPlaying = true;
+                ChangeSprite(animToPlay.transform, animToPlay.targetSprite, animToPlay.targetColor);
+                animToPlay.hasFinished = true;
+                animToPlay.isPlaying = false;
                 break;
         }
     }
@@ -208,6 +240,9 @@ public class Animations : MonoBehaviour {
         public bool isPlaying = false;
         public bool hasFinished = false;
         public double lastTimePlay = 0.0f;
+
+        public Sprite targetSprite = null;
+        public Color targetColor = Color.black;
         public Animation(Transform transform, float speed, AnimationTypes type, Vector3 target) {
             this.transform = transform;
             this.speed = speed;
@@ -215,10 +250,17 @@ public class Animations : MonoBehaviour {
             this.target = target;
         }
 
+        public Animation(Transform imageComponentTransform, Sprite target, Color color) {
+            this.transform = imageComponentTransform;
+            this.speed = 10000000;
+            this.animationType = AnimationTypes.ChangeSprite;
+            this.targetSprite = target;
+            targetColor = color;
+        }
+
     }
 }
 
-[System.Serializable]
 public class AnimationMessage {
     public Animations.AnimationTypes type;
     public int childIndex = -1;
@@ -226,6 +268,10 @@ public class AnimationMessage {
     public float targetX;
     public float targetY;
     public float targetZ;
+
+    public Sprite targetSprite = null;
+    public Color targetColor;
+
     public AnimationMessage(Animations.AnimationTypes type, int childIndex, float speed, float targetX, float targetY, float targetZ) {
         this.childIndex = childIndex;
         this.type = type;
@@ -234,9 +280,29 @@ public class AnimationMessage {
         this.targetY = targetY;
         this.targetZ = targetZ;
     }
+    /// <summary>
+    /// Used with animations like ScaleToZero or ScaleToOne
+    /// </summary>
+    /// <param name="type"></param>
+    /// <param name="childIndex"></param>
+    /// <param name="speed"></param>
     public AnimationMessage(Animations.AnimationTypes type, int childIndex, float speed) {
         this.speed = speed;
         this.childIndex = childIndex;
         this.type = type;
+    }
+
+    /// <summary>
+    /// Used for ChangeSprite AnimationType
+    /// </summary>
+    /// <param name="childIndex">the transform index in parent</param>
+    /// <param name="targetSprite">the sprite to change to</param>
+    public AnimationMessage(int childIndex, Sprite targetSprite, Color color) {
+
+        this.childIndex = childIndex;
+        this.type = Animations.AnimationTypes.ChangeSprite;
+        this.targetSprite = targetSprite;
+        this.speed = 1000000;
+        targetColor = color;
     }
 }

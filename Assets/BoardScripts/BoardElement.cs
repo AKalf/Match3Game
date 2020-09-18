@@ -2,8 +2,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public class BoardElement
-{
+public class BoardElement {
     // public BoardElement upperNeighbour = null;
     // public BoardElement bottomNeighbour = null;
     // public BoardElement rightNeighbour = null;
@@ -12,77 +11,76 @@ public class BoardElement
     protected System.Type thisType = typeof(BoardElement);
     private int childIndex = -1;
 
-    protected UnityEngine.UI.Image imageComponent = null;
+    protected Color colorValue = Color.black;
 
-    private Color color = Color.black;
-
-    public BoardElement(GameObject gameobjectToAttach, int indexInParent, Color colorValue)
-    {
+    protected Sprite elementSprite = null;
+    public BoardElement(GameObject gameobjectToAttach, int indexInParent, Color colorValue) {
         thisType = typeof(BoardElement);
         attachedGameobject = gameobjectToAttach;
         childIndex = indexInParent;
-        this.imageComponent = attachedGameobject.GetComponent<UnityEngine.UI.Image>();
-        this.imageComponent.color = colorValue;
-        imageComponent.sprite = AssetLoader.GetDefaultElementSprite();
+        this.colorValue = colorValue;
+        elementSprite = AssetLoader.GetDefaultElementSprite();
+
+    }
+    public BoardElement(BoardElement elementToCopy) {
+        thisType = typeof(BoardElement);
+        attachedGameobject = elementToCopy.GetAttachedGameObject();
+        childIndex = elementToCopy.GetChildIndex();
+        this.colorValue = elementToCopy.GetElementValue();
     }
 
-    // public void SetIndexInParent(int index)
-    // {
-    //     childIndex = index;
-    // }
-    public int GetChildIndex()
-    {
+    public int GetChildIndex() {
         return childIndex;
     }
 
-    public virtual void OnElementCreation(Color newValue)
-    {
-        this.color = newValue;
-        imageComponent.color = color;
+    /// <summary>
+    /// Should called when the cell's element's value is changed
+    /// </summary>
+    /// <param name="newValue">The new color value of the element to set</param>
+    public virtual void OnElementAppearance(Color newValue) {
+        this.colorValue = newValue;
     }
-    public virtual void OnElementDestruction()
-    {
+    public virtual void OnElementDestruction() {
 
     }
-    public void SetValue(Color color)
-    {
-        this.color = color;
+
+    public Color GetElementValue() {
+        return this.colorValue;
     }
-    public Color GetElementValue()
-    {
-        return this.color;
-    }
-    public System.Type GetElementClassType()
-    {
+
+    public System.Type GetElementClassType() {
         return thisType;
     }
-    public GameObject GetAttachedGameObject()
-    {
+    public GameObject GetAttachedGameObject() {
         return attachedGameobject;
     }
-
+    public Sprite GetElementSprite() {
+        return elementSprite;
+    }
 }
-public class CashBoardElement : BoardElement
-{
+
+public class CashBoardElement : BoardElement {
 
     int cashValue = 0;
+    bool hasBeenDestroyed = false;
 
-    public CashBoardElement(GameObject gameObjectToAttach, int indexInParent, Color colorValue, int cashValue) : base(gameObjectToAttach, indexInParent, colorValue)
-    {
-        base.imageComponent.color = Color.white;
-        base.thisType = typeof(CashBoardElement);
-        this.cashValue = cashValue;
-        this.imageComponent.sprite = AssetLoader.GetCashElementSprite();
+    public CashBoardElement(GameObject gameObjectToAttach, int indexInParent, int cashValue):
+        base(gameObjectToAttach, indexInParent, Color.white) {
+
+            base.elementSprite = AssetLoader.GetCashElementSprite();
+            base.thisType = typeof(CashBoardElement);
+            this.cashValue = cashValue;
+        }
+
+    public override void OnElementAppearance(Color newValue) {
+
     }
-
-
-    public override void OnElementCreation(Color newValue)
-    {
-
-    }
-    public override void OnElementDestruction()
-    {
+    public override void OnElementDestruction() {
         base.OnElementDestruction();
-        MoneyManager.ChangeBalanceBy(cashValue);
+        if (!hasBeenDestroyed) {
+            hasBeenDestroyed = true;
+            MoneyManager.ChangeBalanceBy(cashValue);
+        }
     }
+
 }

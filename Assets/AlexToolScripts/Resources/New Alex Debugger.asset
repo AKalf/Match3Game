@@ -13,11 +13,6 @@ MonoBehaviour:
   m_Name: New Alex Debugger
   m_EditorClassIdentifier: 
   inst: {fileID: 11400000}
-  tags:
-  - Swap
-  - Matches
-  - UpawardMovement
-  - AfterMatch
-  ignoredTag: []
+  ignoredTag: 
   messages: []
   clearMessagesOnPlay: 1

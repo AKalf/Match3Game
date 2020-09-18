@@ -2,53 +2,51 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public class AssetLoader : MonoBehaviour
-{
-    private static class PathManager
-    {
-        private static string boardElementDefaultIcon = "";
+public class AssetLoader : MonoBehaviour {
+    private static class PathManager {
 
-        public static string GetBoardElementDefaultIconPath()
-        {
+        private static string boardElementDefaultIcon = "SquareIcon";
+
+        public static string GetBoardElementDefaultIconPath() {
             return boardElementDefaultIcon;
         }
 
-        private static string boardElementCashIcon = "";
+        private static string boardElementCashIcon = "CoinIcon";
 
-        public static string GetBoardElementCashIconPath()
-        {
+        public static string GetBoardElementCashIconPath() {
             return boardElementCashIcon;
         }
 
     }
 
-    static Sprite defaultElementSprite = null;
-    static Sprite cashElementSprite = null;
+    [SerializeField]
+    Sprite defaultElementSprite = null;
+    [SerializeField]
+    Sprite cashElementSprite = null;
 
-    private void Awake()
-    {
-        defaultElementSprite = (Sprite)Resources.Load(PathManager.GetBoardElementDefaultIconPath());
-        cashElementSprite = (Sprite)Resources.Load(PathManager.GetBoardElementCashIconPath());
+    private static AssetLoader inst;
+
+    private void Awake() {
+        inst = this;
+        //   defaultElementSprite = (Sprite) Resources.Load(PathManager.GetBoardElementDefaultIconPath(), typeof(Sprite));
+        Debug.Log("Sprite: " + defaultElementSprite.name);
+        // cashElementSprite = (Sprite) Resources.Load(PathManager.GetBoardElementCashIconPath(), typeof(Sprite));
+        Debug.Log("Sprite: " + cashElementSprite.name);
     }
     // Start is called before the first frame update
-    void Start()
-    {
+    void Start() {
 
     }
 
     // Update is called once per frame
-    void Update()
-    {
+    void Update() {
 
     }
-    public static Sprite GetDefaultElementSprite()
-    {
-        return defaultElementSprite;
+    public static Sprite GetDefaultElementSprite() {
+        return inst.defaultElementSprite;
     }
-    public static Sprite GetCashElementSprite()
-    {
-        return cashElementSprite;
+    public static Sprite GetCashElementSprite() {
+        return inst.cashElementSprite;
     }
-
 
 }

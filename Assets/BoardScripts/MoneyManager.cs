@@ -5,9 +5,9 @@ using UnityEngine;
 public class MoneyManager : MonoBehaviour {
     private static float balance = 100;
 
-    private static float swapCost = 0.10f;
-    private static float swapCostMin = 0.10f;
-    private static float swapCostMax = 1.0f;
+    private static float swapCost = 5.0f;
+    private static float swapCostMin = 1.0f;
+    private static float swapCostMax = 10.0f;
 
     private static MoneyManager instance = null;
 

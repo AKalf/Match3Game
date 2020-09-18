@@ -17,7 +17,7 @@ public class OnDragEvent : MonoBehaviour {
         //Add a Drag type event to the Event Trigger
         entryBegin.eventID = EventTriggerType.BeginDrag;
         //call the OnDragDelegate function when the Event System detects dragging
-        entryBegin.callback.AddListener((data) => { OnDragDelegate((PointerEventData)data); });
+        entryBegin.callback.AddListener((data) => { OnDragDelegate((PointerEventData) data); });
         //Add the trigger entry
         trigger.triggers.Add(entryBegin);
 
@@ -25,7 +25,7 @@ public class OnDragEvent : MonoBehaviour {
         //Add a Drag type event to the Event Trigger
         entryEnd.eventID = EventTriggerType.PointerUp;
         //call the OnDragDelegate function when the Event System detects dragging
-        entryEnd.callback.AddListener((data) => { Ray((PointerEventData)data); });
+        entryEnd.callback.AddListener((data) => { Ray((PointerEventData) data); });
         //Add the trigger entry
         trigger.triggers.Add(entryEnd);
     }
@@ -50,7 +50,6 @@ public class OnDragEvent : MonoBehaviour {
         EventSystem.current.RaycastAll(pointerData, results);
 
         if (results.Count > 0) {
-            //WorldUI is my layer name
             if (results[0].gameObject.GetComponent<OnDragEvent>() != null) {
                 InputManager.GetInstance().HandleInputForCell(results[0].gameObject);
                 results.Clear();

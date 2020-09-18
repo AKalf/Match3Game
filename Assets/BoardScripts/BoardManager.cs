@@ -3,8 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
-public class BoardManager : MonoBehaviour
-{
+public class BoardManager : MonoBehaviour {
     [SerializeField]
     private float swappingSpeed = 3.0f;
     [SerializeField]
@@ -16,23 +15,23 @@ public class BoardManager : MonoBehaviour
     [SerializeField]
     public Color highlightColor;
 
-    #region Panels
+#region Panels
     /// <summary> this.transform</summary>
     Transform boardPanel = null;
     /// <summary> holds score and other UI</summary>
     Transform detailsPanel = null;
     /// <summary> Holds cells</summary>
     Transform gamePanel = null;
-    #endregion
+#endregion
 
     /// <summary> The elements of the board. 0 dimension is collums, first dimension is rows</summary>
-    BoardElement[,] positions = null;
+    BoardElement[, ] positions = null;
     /// <summary> Flagged elements that create matches</summary>
-    bool[,] matchedElemPositions = null;
+    bool[, ] matchedElemPositions = null;
     /// <summary> Flagged destroyed elements, that need replacing</summary>
-    bool[,] positionsDestroyed = null;
+    bool[, ] positionsDestroyed = null;
 
-    #region  Utility and holders
+#region  Utility and holders
     /// <summary> Helping transforms to create the drop effect</summary>
     Transform[] holders = null;
     [SerializeField]
@@ -42,7 +41,7 @@ public class BoardManager : MonoBehaviour
     BoardElement firstElement = null;
     /// <summary> Value holder for step1 to step2</summary>
     BoardElement secondElement = null;
-    #endregion
+#endregion
 
     // TO-DO: Create a proper singleton
 
@@ -58,7 +57,7 @@ public class BoardManager : MonoBehaviour
     private const float chanchesForCashElement = 25;
     private const int cashElementValue = 50;
 
-    #region  GameLoop states
+#region  GameLoop states
     /// <summary> Prevents input overwriting</summary>
     private bool areCellsSwapping = false;
     /// <summary> Step1 in Update, handle input</summary>
@@ -73,12 +72,11 @@ public class BoardManager : MonoBehaviour
     bool shouldGenerateElem = false;
     /// <summary> Step6 check for new matches at the board</summary>
     bool shouldCheckBoard = false;
-    #endregion
+#endregion
 
     GameClient attachedClient = null;
 
-    void Awake()
-    {
+    void Awake() {
         inst = this;
         boardPanel = this.transform;
         detailsPanel = boardPanel.GetChild(0);
@@ -89,50 +87,57 @@ public class BoardManager : MonoBehaviour
         positionsDestroyed = new bool[totalCollums, totalRows];
         holders = new Transform[holdersParent.childCount];
 
-        for (int i = 0; i < holders.Length; i++)
-        {
+        for (int i = 0; i < holders.Length; i++) {
             holders[i] = holdersParent.GetChild(i);
         }
         // Debug
-        DebugCheckPanels();
+        //DebugCheckPanels();
 
         int rowIndex = 0;
         int collumIndex = 0;
 
         // Assign elements to the board
-        for (int i = 0; i < gamePanel.childCount; i++)
-        {
-            if (collumIndex < totalCollums && rowIndex < totalRows)
-            {
-                positions[collumIndex, rowIndex] = new BoardElement(gamePanel.GetChild(i).gameObject, i, Color.black);//gamePanel.GetChild(i).gameObject.AddComponent<BoardElement>();
+        for (int i = 0; i < gamePanel.childCount; i++) {
+            if (collumIndex < totalCollums && rowIndex < totalRows) {
+                int newColorIndex = Random.Range(0, BoardFunctions.GetAvailableColors().Length);
+                Color newColor = BoardFunctions.GetAvailableColors() [newColorIndex];
 
+                GameObject defaultImageChild = new GameObject("defaultImageChild");
+                defaultImageChild.AddComponent<Image>();
+                defaultImageChild.GetComponent<Image>().sprite = AssetLoader.GetDefaultElementSprite();
+                defaultImageChild.GetComponent<Image>().preserveAspect = true;
+
+                defaultImageChild.transform.parent = gamePanel.GetChild(i);
+                defaultImageChild.transform.localScale = Vector3.one;
+                defaultImageChild.transform.position = Vector3.zero;
+                defaultImageChild.transform.SetAsFirstSibling();
+
+                positions[collumIndex, rowIndex] = new BoardElement(gamePanel.GetChild(i).gameObject, i, newColor); //gamePanel.GetChild(i).gameObject.AddComponent<BoardElement>();
+
+                playingAnimations.Add(new AnimationMessage(i, AssetLoader.GetDefaultElementSprite(), newColor));
                 //Debug.Log(positions[collumIndex, rowIndex].name + " is at position: c" + collumIndex + ", r" + rowIndex);
                 collumIndex++;
                 // fix collum index
-                if (collumIndex == totalCollums)
-                {
+                if (collumIndex == totalCollums) {
                     rowIndex++;
                     collumIndex = 0;
                 }
             }
 
         }
+        SendAnimationMessagesToClient(ref playingAnimations);
     }
 
     // Start is called before the first frame update
-    void Start()
-    {
+    void Start() {
         // Assign color values to elemets
 
-        int currentScore = 0;
+        //int currentScore = 0;
         bool hasPotentialInputs = false;
-        for (int row = 0; row < positions.GetLength(1); row++)
-        {
-            for (int collum = 0; collum < positions.GetLength(0); collum++)
-            {
-                positions[collum, row].OnElementCreation(BoardFunctions.GetColorInScore(collum, row, ref positions, matchedElemPositions, totalCollums, totalRows, maxScoreAllowed, ref currentScore, (currentScore >= maxScoreAllowed - 2) ? true : false));
-                if (BoardFunctions.isPotentialInput(collum, row, positions, matchedElemPositions, totalCollums, totalRows) > 0 && !hasPotentialInputs)
-                {
+        for (int row = 0; row < positions.GetLength(1); row++) {
+            for (int collum = 0; collum < positions.GetLength(0); collum++) {
+                //positions[collum, row].SetValue(BoardFunctions.GetColorInScore(collum, row, ref positions, matchedElemPositions, totalCollums, totalRows, maxScoreAllowed, ref currentScore, (currentScore >= maxScoreAllowed - 2) ? true : false));
+                if (BoardFunctions.isPotentialInput(collum, row, positions, matchedElemPositions, totalCollums, totalRows) > 0 && !hasPotentialInputs) {
                     hasPotentialInputs = true;
                 }
 
@@ -142,16 +147,13 @@ public class BoardManager : MonoBehaviour
     }
 
     // Update is called once per frame
-    void Update()
-    {
+    void Update() {
         // Do nothing.
-        if (areAnimationsPlaying)
-        {
+        if (areAnimationsPlaying) {
             return;
         }
         // Step1: check if input create matches and if true move to step2
-        else if (shouldCheckIfInputCreatesMatches)
-        {
+        else if (shouldCheckIfInputCreatesMatches) {
             AlexDebugger.GetInstance().AddMessage("Entering Step1: -check if input between-" + firstElement.GetAttachedGameObject().transform.name + " and " + secondElement.GetAttachedGameObject().transform.name + " create matches", AlexDebugger.tags.Step1);
             //Debug.Log("Checking for matches based on input");
             // About first input
@@ -163,14 +165,12 @@ public class BoardManager : MonoBehaviour
             int numberOfMatchesForSecond = BoardFunctions.CheckForMatches(secondPosition.Key, secondPosition.Value, positions, ref matchedElemPositions, totalCollums, totalRows, true);
             AlexDebugger.GetInstance().AddMessage("Number of matches found for input element: " + secondElement.GetAttachedGameObject().transform.name + " are " + numberOfMatchesForSecond, AlexDebugger.tags.Step1);
             // if there are matches
-            if (numberOfMatchesForFirst > 0 || numberOfMatchesForSecond > 0)
-            {
+            if (numberOfMatchesForFirst > 0 || numberOfMatchesForSecond > 0) {
                 AlexDebugger.GetInstance().AddMessage("Matches found, when finish, go to step2: -play effects for matched elements-", AlexDebugger.tags.Step1);
                 // allow Update() to play effects
                 shouldPlayEffects = true;
             }
-            else
-            {
+            else {
                 AlexDebugger.GetInstance().AddMessage("No matches found, when finish, go back to step0: -waiting for input-", AlexDebugger.tags.Step1);
             }
             AlexDebugger.GetInstance().AddMessage("Step1 Finished: -check if input between-" + firstElement.GetAttachedGameObject().transform.name + " and " + secondElement.GetAttachedGameObject().transform.name + " with total matches: " + numberOfMatchesForSecond, AlexDebugger.tags.Step1);
@@ -180,22 +180,21 @@ public class BoardManager : MonoBehaviour
 
             return;
         }
-        // Step2: play effects for matched elements and move to step3
-        else if (shouldPlayEffects)
-        {
+        // Step2: -Play effects for matched elements- and move to step3
+        else if (shouldPlayEffects) {
+
             AlexDebugger.GetInstance().AddMessage("Entering Step2: -play effects for matched elements-", AlexDebugger.tags.Step2);
-            for (int row = 0; row < positions.GetLength(1); row++)
-            {
-                for (int collum = 0; collum < positions.GetLength(0); collum++)
-                {
-                    if (matchedElemPositions[collum, row] == true)
-                    {
+            for (int row = 0; row < positions.GetLength(1); row++) {
+                for (int collum = 0; collum < positions.GetLength(0); collum++) {
+                    if (matchedElemPositions[collum, row] == true) {
                         AlexDebugger.GetInstance().AddMessage("Element: " + positions[collum, row].GetAttachedGameObject().transform.name + "  was a match of color: " + positions[collum, row].GetElementValue().ToString() + ", de-activating highlight.", AlexDebugger.tags.Step2);
                         BoardFunctions.PlayMatchEffect(collum, row, positions, ref playingAnimations, swappingSpeed);
                     }
                     BoardFunctions.ToggleHighlightCell(collum, row, positions, false, highlightColor);
+
                 }
             }
+
             AlexDebugger.GetInstance().AddMessage("Sending total animations to client: " + playingAnimations.Count, AlexDebugger.tags.Step2);
             SendAnimationMessagesToClient(ref playingAnimations);
             shouldPlayEffects = false;
@@ -204,16 +203,12 @@ public class BoardManager : MonoBehaviour
             return;
         }
         // Step3: repeat until non-destroyed elements have droped to lower position and then move to step4
-        else if (areElemetsReorienting)
-        {
+        else if (areElemetsReorienting) {
             AlexDebugger.GetInstance().AddMessage("Entering Step3: -reorienting board-", AlexDebugger.tags.Step3);
             bool hasChanged = false;
-            for (int row = totalRows - 1; row > -1; row--)
-            {
-                for (int collum = 0; collum < totalCollums; collum++)
-                {
-                    if (matchedElemPositions[collum, row] == true)
-                    {
+            for (int row = totalRows - 1; row > -1; row--) {
+                for (int collum = 0; collum < totalCollums; collum++) {
+                    if (matchedElemPositions[collum, row] == true) {
                         AlexDebugger.GetInstance().AddMessage("Moving element: " + positions[collum, row].GetAttachedGameObject().transform.name + " upwards", AlexDebugger.tags.Step3);
                         BoardFunctions.MoveMatchedElementUpwards(collum, row, ref positions, ref matchedElemPositions, ref positionsDestroyed, ref playingAnimations, swappingSpeed);
                         AlexDebugger.GetInstance().AddMessage("Sending total animations to client: " + playingAnimations.Count, AlexDebugger.tags.Step3);
@@ -222,158 +217,114 @@ public class BoardManager : MonoBehaviour
                     }
                 }
                 // placed here so the entire row's animation play simutaniously
-                if (hasChanged)
-                {
+                if (hasChanged) {
                     AlexDebugger.GetInstance().AddMessage("Re-orienting has not finished, wait a frame and repeat Step3: -reorienting board-", AlexDebugger.tags.Step3);
                     return;
                 }
             }
-            if (!hasChanged)
-            {
-                AlexDebugger.GetInstance().AddMessage("Step3: -reorienting board- has finished, moving to Step4: -replace destroyed elements", AlexDebugger.tags.Step3);
-                areElemetsReorienting = false;
-                shouldGenerateElem = true;
+            if (hasChanged) {
+                AlexDebugger.GetInstance().AddMessage("Re-orienting has not finished, wait a frame and repeat Step3: -reorienting board-", AlexDebugger.tags.Step3);
+                return;
             }
+
+            SendAnimationMessagesToClient(ref playingAnimations);
+            AlexDebugger.GetInstance().AddMessage("Step3: -reorienting board- has finished, moving to Step4: -replace destroyed elements", AlexDebugger.tags.Step3);
+            areElemetsReorienting = false;
+            shouldGenerateElem = true;
+
             return;
         }
-        // Step4: replace destroyed elements by assigning new color,  move to step5
-        else if (shouldGenerateElem)
-        {
+        // Step4: -Replace destroyed elements-, by assigning new color,  move to step5
+        else if (shouldGenerateElem) {
             AlexDebugger.GetInstance().AddMessage("Entering Step4: -replace destroyed elements-", AlexDebugger.tags.Step4);
-            // the minimum maxOutput user's input can reach
-            int maxOutput = -1;
 
-            int bestInputCollum = -1;
-            int bestInputRow = -1;
+            for (int row = positions.GetLength(1) - 1; row > -1; row--) {
+                for (int collum = 0; collum < positions.GetLength(0); collum++) {
+                    if (positionsDestroyed[collum, row] == true) {
 
-            // Check maxOutput for elements already on the board
-            for (int row = 0; row < positions.GetLength(1); row++)
-            {
-                for (int collum = 0; collum < positions.GetLength(0); collum++)
-                {
-                    if (positionsDestroyed[collum, row] == false)
-                    {
-                        // Get the max output of this element
-                        int maxOutputForElement = BoardFunctions.isPotentialInput(collum, row, positions, matchedElemPositions, totalCollums, totalRows);
-                        if (maxOutputForElement >= 1)
-                        {
-                            AlexDebugger.GetInstance().AddMessage("Element: " + positions[collum, row] + " exists with a potential output of " + maxOutputForElement, AlexDebugger.tags.Step4);
-                        }
-                        if (maxOutputForElement > maxOutput)
-                        {
-                            AlexDebugger.GetInstance().AddMessage("Element: " + positions[collum, row] + " exists with a potential output of " + maxOutputForElement + " is the new possible maxOut, previous: " + maxOutput, AlexDebugger.tags.Step4);
-                            maxOutput = maxOutputForElement;
-                            bestInputCollum = collum;
-                            bestInputRow = row;
-                        }
-                    }
-                }
-            }
-
-            for (int row = 0; row < positions.GetLength(1); row++)
-            {
-                for (int collum = 0; collum < positions.GetLength(0); collum++)
-                {
-                    if (positionsDestroyed[collum, row] == true)
-                    {
-                        int maxOutputForElement = BoardFunctions.ReplaceElement(collum, row, ref positions, ref matchedElemPositions, holders, maxScoreAllowed, maxOutput, chanchesForCashElement, cashElementValue, totalCollums, totalRows, ref playingAnimations, swappingSpeed);
-                        if (maxOutputForElement >= 1)
-                        {
-                            AlexDebugger.GetInstance().AddMessage("Element: " + positions[collum, row] + " was created wihh a potential output of " + maxOutputForElement, AlexDebugger.tags.Step4);
-                        }
-                        if (maxOutputForElement > maxOutput)
-                        {
-                            AlexDebugger.GetInstance().AddMessage("Element: " + positions[collum, row] + " exists with a potential output of " + maxOutputForElement + " is the new possible maxOut, previous: " + maxOutput, AlexDebugger.tags.Step4);
-                            maxOutput = maxOutputForElement;
-                            bestInputCollum = collum;
-                            bestInputRow = row;
-                        }
+                        BoardFunctions.ReplaceElement(collum, row, ref positions, ref matchedElemPositions, holders, chanchesForCashElement, cashElementValue, ref playingAnimations, swappingSpeed);
                         positionsDestroyed[collum, row] = false;
+
                     }
                 }
             }
-            AlexDebugger.GetInstance().AddMessage("Element: " + positions[bestInputCollum, bestInputRow].GetAttachedGameObject().name + " has the best score possible: " + maxOutput, AlexDebugger.tags.Step4);
+
             AlexDebugger.GetInstance().AddMessage("Sending total animations to client: " + playingAnimations.Count, AlexDebugger.tags.Step4);
             SendAnimationMessagesToClient(ref playingAnimations);
-            AlexDebugger.GetInstance().AddMessage("Step4 -replace destroyed elements- has finished, moving to Step5 -Aftermatch-", AlexDebugger.tags.Step4);
+            // AlexDebugger.GetInstance().AddMessage("Element: " + positions[bestInputCollum, bestInputRow].GetAttachedGameObject().name + " has the best score possible: " + maxOutput, AlexDebugger.tags.Step4);
+            AlexDebugger.GetInstance().AddMessage("Step4 -Replace destroyed elements- has finished, moving to Step5 -Aftermatch-", AlexDebugger.tags.Step4);
             shouldGenerateElem = false;
             shouldCheckBoard = true;
             return;
         }
         // Step5: check for new matches
-        else if (shouldCheckBoard)
-        {
-            Debug.Log("### AfterMatch ### Checking board for combos");
+        else if (shouldCheckBoard) {
+            AlexDebugger.GetInstance().AddMessage("Entering Step5: -Aftermatch-", AlexDebugger.tags.Step5);
+            //Debug.Log("### AfterMatch ### Checking board for combos");
             int newTotalMatches = BoardFunctions.CheckBoardForMatches(positions, ref matchedElemPositions, totalCollums, totalRows);
             // Go back to step2
-            if (newTotalMatches > 0)
-            {
-                Debug.Log("### AfterMatch ### Total new matches found: " + newTotalMatches);
-                AlexDebugger.GetInstance().AddMessage("Total new matches found: " + newTotalMatches, AlexDebugger.tags.Aftermatch);
+            if (newTotalMatches > 0) {
+                //Debug.Log("### AfterMatch ### Total new matches found: " + newTotalMatches);
+                AlexDebugger.GetInstance().AddMessage("Total new matches found on board: " + newTotalMatches, AlexDebugger.tags.Step5);
+                AlexDebugger.GetInstance().AddMessage("Step5 -Aftermatch- has finished, with state -new matches found-,  moving to Step2 -Play effects for matched elements-", AlexDebugger.tags.Step5);
                 shouldPlayEffects = true;
             }
             // Check for possible inputs
-            else
-            {
+            else {
+                AlexDebugger.GetInstance().AddMessage("No new matches found, flagging potential input", AlexDebugger.tags.Step5);
                 bool hasPossibleInput = false;
-                for (int row = 0; row < positions.GetLength(1); row++)
-                {
-                    for (int collum = 0; collum < positions.GetLength(0); collum++)
-                    {
-                        if (BoardFunctions.isPotentialInput(collum, row, positions, matchedElemPositions, totalCollums, totalRows) > 0)
-                        {
+                for (int row = 0; row < positions.GetLength(1); row++) {
+                    for (int collum = 0; collum < positions.GetLength(0); collum++) {
+                        if (BoardFunctions.isPotentialInput(collum, row, positions, matchedElemPositions, totalCollums, totalRows) > 0) {
+                            AlexDebugger.GetInstance().AddMessage(positions[collum, row].GetAttachedGameObject() + " is potential input", AlexDebugger.tags.Step5);
                             BoardFunctions.ToggleHighlightCell(collum, row, positions, true, highlightColor);
                             hasPossibleInput = true;
                         }
-                        else
-                        {
+                        else {
                             BoardFunctions.ToggleHighlightCell(collum, row, positions, false, highlightColor);
                         }
                     }
                 }
-                AlexDebugger.GetInstance().AddMessage("No new matches found", AlexDebugger.tags.Aftermatch);
-                Debug.Log("### AfterMatch ### No new matches found");
+                //Debug.Log("### AfterMatch ### No new matches found");
 
-                if (!hasPossibleInput)
-                {
-                    Debug.Log("### AfterMatch ### No possible inputs found, re-generating board");
-                    for (int row = 0; row < positions.GetLength(1); row++)
-                    {
-                        for (int collum = 0; collum < positions.GetLength(0); collum++)
-                        {
+                if (!hasPossibleInput) {
+                    //Debug.Log("### AfterMatch ### No possible inputs found, re-generating board");
+                    AlexDebugger.GetInstance().AddMessage("No potential input found, all elements are flagged as destroyed", AlexDebugger.tags.Step5);
+                    for (int row = 0; row < positions.GetLength(1); row++) {
+                        for (int collum = 0; collum < positions.GetLength(0); collum++) {
                             positionsDestroyed[collum, row] = true;
                         }
                     }
+                    AlexDebugger.GetInstance().AddMessage("Step5 -Aftermatch- has finished, with state -No available input-,  moving to Step4 -Replace destroyed elements-", AlexDebugger.tags.Step5);
                     shouldGenerateElem = true;
                 }
-                SendAnimationMessagesToClient(ref playingAnimations);
-                shouldCheckBoard = false;
-                return;
+                else {
+                    AlexDebugger.GetInstance().AddMessage("Step5 -Aftermatch- has finished, with state -Has available input-,  moving to Step0 -Wait for input-", AlexDebugger.tags.Step5);
+
+                }
             }
+            shouldCheckBoard = false;
+            SendAnimationMessagesToClient(ref playingAnimations);
         }
         // New input can be processed
-        else
-        {
+        else {
             OnDragEvent.hasDragBegin = false;
             areCellsSwapping = false;
         }
 
     }
 
-    public static BoardManager GetInstance()
-    {
+    public static BoardManager GetInstance() {
         return inst;
     }
 
-    public static BoardManager GetNewBoardManager()
-    {
+    public static BoardManager GetNewBoardManager() {
         BoardManager newBoard = GetInstance().transform.gameObject.AddComponent<BoardManager>();
         return newBoard;
     }
 
     /// <summary>Receives input from client and handles it</summary>
-    public void HandleInput(int firstElementIndexAtParent, int secondElementIndexAtParent)
-    {
+    public void HandleInput(int firstElementIndexAtParent, int secondElementIndexAtParent) {
         // find first element based on gamePanel's child index
         firstElement = BoardFunctions.GetElementBasedOnParentIndex(positions, firstElementIndexAtParent);
         // find second element based on gamePanel's child index
@@ -381,20 +332,18 @@ public class BoardManager : MonoBehaviour
 
         // Check if elements are neighbours thus input correct
         // TO-DO: make it to check if it is a possible mathch
-        if (BoardFunctions.GetIfNeighbours(firstElement, secondElement, positions))
-        {
+        if (BoardFunctions.GetIfNeighbours(firstElement, secondElement, positions)) {
             AlexDebugger.GetInstance().AddMessage("Correct input: " + firstElement.GetAttachedGameObject().transform.name + ", with " + secondElement.GetAttachedGameObject().transform.name, AlexDebugger.tags.Input);
             // Remove tokens
             MoneyManager.ChangeBalanceBy(-MoneyManager.GetSwapCost());
             // Swap the elements on the board
-            BoardFunctions.SwapElements(firstElement, secondElement, ref positions, ref playingAnimations, rewire: false, swappingSpeed);
+            BoardFunctions.SwapElements(firstElement, secondElement, ref positions, ref playingAnimations, rewire : false, swappingSpeed);
             // Allow Update() to check if matches are created
             shouldCheckIfInputCreatesMatches = true;
         }
-        else
-        {
+        else {
             // Swap elements, on rewire mode
-            BoardFunctions.SwapElements(firstElement, secondElement, ref positions, ref playingAnimations, rewire: true, swappingSpeed);
+            BoardFunctions.SwapElements(firstElement, secondElement, ref positions, ref playingAnimations, rewire : true, swappingSpeed);
         }
         // Send animations to client and empty list
         SendAnimationMessagesToClient(ref playingAnimations);
@@ -402,10 +351,8 @@ public class BoardManager : MonoBehaviour
 
     }
 
-    public void SendAnimationMessagesToClient(ref List<AnimationMessage> animMsg)
-    {
-        if (animMsg.Count > 0)
-        {
+    public void SendAnimationMessagesToClient(ref List<AnimationMessage> animMsg) {
+        if (animMsg.Count > 0) {
             Animations.SetAnimationMessages(animMsg.ToArray());
             animMsg.Clear();
             areAnimationsPlaying = true;
@@ -413,65 +360,49 @@ public class BoardManager : MonoBehaviour
     }
 
     /// <summary>Is boardManager available</summary>
-    public bool IsAvailable()
-    {
-        if (areCellsSwapping || areAnimationsPlaying)
-        {
+    public bool IsAvailable() {
+        if (areCellsSwapping || areAnimationsPlaying) {
             return false;
         }
-        else
-        {
+        else {
             return true;
         }
     }
 
-    public GameClient GetClientAttached()
-    {
+    public GameClient GetClientAttached() {
         return attachedClient;
     }
-    public void SetClient(GameClient clientToAttach)
-    {
-        if (attachedClient == null)
-        {
+    public void SetClient(GameClient clientToAttach) {
+        if (attachedClient == null) {
             attachedClient = clientToAttach;
         }
-        else
-        {
+        else {
             Debug.LogWarning("Trying to attach client but client has already been attached");
         }
     }
 
     /// Debug
-    private void DebugElementsMatches(List<BoardElement> elements)
-    {
-        if (elements.Count > 0)
-        {
+    private void DebugElementsMatches(List<BoardElement> elements) {
+        if (elements.Count > 0) {
             string d = "";
-            foreach (BoardElement e in elements)
-            {
+            foreach (BoardElement e in elements) {
                 d += e.GetAttachedGameObject().name + ", ";
             }
             AlexDebugger.GetInstance().AddMessage(d, AlexDebugger.tags.Matches);
             Debug.Log(d + ", Matches");
         }
     }
-    private void DebugCheckPanels()
-    {
+    private void DebugCheckPanels() {
 #if UNITY_EDITOR
-        if (detailsPanel.gameObject.name != "DetailsPanel")
-        {
+        if (detailsPanel.gameObject.name != "DetailsPanel") {
             Debug.LogError(boardPanel.gameObject.name + ".GetChild(0).name != DetailsPanel");
         }
-        if (gamePanel.gameObject.name != "GamePanel")
-        {
+        if (gamePanel.gameObject.name != "GamePanel") {
             Debug.LogError(boardPanel.gameObject.name + ".GetChild(1).name != GamePanel");
         }
-        else
-        {
-            for (int i = 0; i < gamePanel.childCount; i++)
-            {
-                if (gamePanel.GetChild(i).GetComponent<UnityEngine.UI.Image>() == null)
-                {
+        else {
+            for (int i = 0; i < gamePanel.childCount; i++) {
+                if (gamePanel.GetChild(i).GetComponent<UnityEngine.UI.Image>() == null) {
                     Debug.LogError(gamePanel.GetChild(i).name + " has no Image component");
                     gamePanel.GetChild(i).gameObject.AddComponent<UnityEngine.UI.Image>();
                 }

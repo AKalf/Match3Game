@@ -1,5 +1,6 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using UnityEditor;
 using UnityEngine;
 
@@ -22,7 +23,9 @@ public class AlexDebugger : ScriptableObject {
         Step1,
         Step2,
         Step3,
-        Step4
+        Step4,
+        Step5,
+        Animations
     }
 
     [SerializeField]
@@ -36,25 +39,26 @@ public class AlexDebugger : ScriptableObject {
     [SerializeField]
     bool clearMessagesOnPlay = false;
 
-
     public static AlexDebugger GetInstance() {
         if (instance == null) {
-            AlexDebugger obj = (AlexDebugger)Resources.Load(pathToDB, typeof(AlexDebugger));
+            AlexDebugger obj = (AlexDebugger) Resources.Load(pathToDB, typeof(AlexDebugger));
             if (obj == null) {
                 Debug.LogError("No asset AlexDebugger found");
             }
             else if (obj is AlexDebugger) {
-                instance = (AlexDebugger)obj;
+                instance = (AlexDebugger) obj;
             }
         }
         return instance;
     }
 
-    public void AddMessage(string msg, tags tag, Object trigger = null) {
+    public void AddMessage(string msg, tags tag, Object trigger = null, [CallerMemberName] string callingMethod = "", [CallerFilePath] string callingFilePath = "", [CallerLineNumber] int callingFileLineNumber = 0) {
         if (ignoredTag.Contains(tag)) {
             return;
         }
-        DebugMessage dMsg = new DebugMessage(msg + "    [" + Time.realtimeSinceStartup + "]", tag, trigger);
+
+        DebugMessage dMsg = new DebugMessage(msg + "    [Timestamp: " + Time.realtimeSinceStartup + "], [Line: " +
+            callingFileLineNumber + "], \n [Function: " + callingMethod + "], \n [File path: " + callingFilePath + "]", tag, trigger);
 
         dMsg.name = dMsg.tag + "(" + dMsg.GetHashCode() + ")";
 
@@ -91,6 +95,5 @@ public class AlexDebugger : ScriptableObject {
     public void ClearAllMessages() {
         messages.Clear();
     }
-
 
 }

@@ -11,7 +11,12 @@ public class AlexDebuggerWindow : EditorWindow {
     bool hasInit = false;
 
     private Dictionary<AlexDebugger.tags, Vector2> scrollPos;
-    Vector2 messagScroll = new Vector2();
+    Vector2 messagScroll = Vector2.zero;
+
+    Vector2 foldoutsScroll = Vector2.zero;
+
+    bool showAllMessageFoldout = false;
+    Vector2 allMessagesScroll = Vector2.zero;
 
     [MenuItem("Tools/AlexDebugger")]
     static void ShowWindow() {
@@ -25,7 +30,7 @@ public class AlexDebuggerWindow : EditorWindow {
             tagsAndMessages = new Dictionary<AlexDebugger.tags, List<string>>();
             tagsFoldouts = new Dictionary<AlexDebugger.tags, bool>();
             scrollPos = new Dictionary<AlexDebugger.tags, Vector2>();
-            //scrollPos.Add("foldouts", Vector2.zero);
+
             foreach (DebugMessage msg in AlexDebugger.GetInstance().messages) {
                 if (tagsAndMessages.ContainsKey(msg.tag) == false) {
                     if (msg.obj != null) {
@@ -43,15 +48,21 @@ public class AlexDebuggerWindow : EditorWindow {
             hasInit = true;
         }
         else {
-            messagScroll = EditorGUILayout.BeginScrollView(messagScroll, false, false);
+
+            foldoutsScroll = EditorGUILayout.BeginScrollView(foldoutsScroll);
             foreach (AlexDebugger.tags tag in tagsAndMessages.Keys) {
                 EditorGUILayout.BeginHorizontal();
                 tagsFoldouts[tag] = EditorGUILayout.Foldout(tagsFoldouts[tag], "Show debug for tag: " + tag);
-                if (tagsFoldouts[tag]) {
-                    tagsFoldouts[tag] = true;
+                GUILayout.Space(10);
+                if (GUILayout.Button("Clear debug for tag:  " + tag, GUILayout.Width(300))) {
+                    AlexDebugger.GetInstance().ClearMessagesForTag(tag);
+                    hasInit = false;
                 }
                 EditorGUILayout.EndHorizontal();
             }
+            EditorGUILayout.EndScrollView();
+
+            messagScroll = EditorGUILayout.BeginScrollView(messagScroll, false, false);
             foreach (AlexDebugger.tags tag in tagsFoldouts.Keys) {
                 if (tagsFoldouts[tag] == true) {
                     scrollPos[tag] = EditorGUILayout.BeginScrollView(scrollPos[tag], false, false);
@@ -62,14 +73,26 @@ public class AlexDebuggerWindow : EditorWindow {
                     }
                     EditorGUILayout.EndScrollView();
                 }
-                GUILayout.Space(10);
-                if (GUILayout.Button("Clear debug for tag:  " + tag)) {
-                    AlexDebugger.GetInstance().ClearMessagesForTag(tag);
-                    hasInit = false;
-                }
             }
             EditorGUILayout.EndScrollView();
         }
-
+        showAllMessageFoldout = EditorGUILayout.Foldout(showAllMessageFoldout, "Show all messages based on time created");
+        if (showAllMessageFoldout) {
+            allMessagesScroll = EditorGUILayout.BeginScrollView(allMessagesScroll);
+            List<DebugMessage> messages = AlexDebugger.GetInstance().messages;
+            foreach (DebugMessage msg in messages) {
+                EditorGUILayout.TextArea(msg.message + ". -[tag]- " + msg.tag + ", -[trigger]- " + ((msg.obj == null) ? "" : msg.obj.name));
+                EditorGUILayout.Separator();
+            }
+            EditorGUILayout.EndScrollView();
+        }
+        if (GUILayout.Button("Destroy all messages")) {
+            foreach (AlexDebugger.tags tag in tagsAndMessages.Keys) {
+                for (int i = 0; i < tagsAndMessages[tag].Count; i++) {
+                    tagsAndMessages[tag].Remove(tagsAndMessages[tag][i]);
+                }
+            }
+            hasInit = false;
+        }
     }
 }
