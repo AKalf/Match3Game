@@ -74,7 +74,7 @@ public static class BoardFunctions {
         int numberOfElem = 0;
 
         if (row - 1 > -1) {
-            if (positions[collum, row - 1].GetElementClassType() == typeof(CashBoardElement)) {
+            if (positions[collum, row - 1].GetElementValue() == Color.white) {
                 return 0;
             }
             if (positions[collum, row].GetElementValue() == positions[collum, row - 1].GetElementValue()) {
@@ -89,7 +89,7 @@ public static class BoardFunctions {
         int numberOfElem = 0;
 
         if (row + 1 < rowsNumbers) {
-            if (positions[collum, row + 1].GetElementClassType() == typeof(CashBoardElement)) {
+            if (positions[collum, row + 1].GetElementValue() == Color.white) {
                 return 0;
             }
             if (positions[collum, row].GetElementValue() == positions[collum, row + 1].GetElementValue()) {
@@ -107,7 +107,7 @@ public static class BoardFunctions {
         int numberOfElem = 0;
 
         if (collum - 1 > -1) {
-            if (positions[collum - 1, row].GetElementClassType() == typeof(CashBoardElement)) {
+            if (positions[collum - 1, row].GetElementValue() == Color.white) {
                 return 0;
             }
             if (positions[collum, row].GetElementValue() == positions[collum - 1, row].GetElementValue()) {
@@ -123,7 +123,7 @@ public static class BoardFunctions {
     public static int CheckRightNeighboursForMatches(int collum, int row, BoardElement[, ] positions, int collumsNumber) {
         int numberOfElem = 0;
         if (collum + 1 < collumsNumber) {
-            if (positions[collum + 1, row].GetElementClassType() == typeof(CashBoardElement)) {
+            if (positions[collum + 1, row].GetElementValue() == Color.white) {
                 return 0;
             }
             if (positions[collum, row].GetElementValue() == positions[collum + 1, row].GetElementValue()) {
@@ -137,7 +137,10 @@ public static class BoardFunctions {
 
     /// <summary> Flags positions that belong to a match </summary>
     /// <param name="shouldFlag"> if false, elements wont be marked as matched (usefull when want to check possible matches)</param>
-    /// <returns>returns the number of matches found</returns>
+    /// <returns>returns an array where:
+    /// position 0: number of matches that create a cross
+    /// position 1: number of matches create a bomb
+    /// position 2: number of matches create a bell</returns>
     public static int CheckForMatches(int startCollum, int startRow, BoardElement[, ] positions, ref bool[, ] matchedElemPositions, int collumsNumber, int rowsNumber, bool shouldFlag = true) {
 
         int upperMatches = BoardFunctions.CheckUpperNeighboursForMatches(startCollum, startRow, positions);
@@ -215,8 +218,7 @@ public static class BoardFunctions {
 
     /// <summary>Re-creates destroyed elements, by moving them to holders position and then making a drop effect</summary>
     /// <returns>The best score that can be reached if swapped with neighbour</returns>
-    public static void ReplaceElement(int collum, int row,
-        ref BoardElement[, ] positions, ref bool[, ] matchedElemPositions, Transform[] holders, float chanchesForCashElement, int cashElementValue, ref List<AnimationMessage> playingAnimations, float swappingSpeed) {
+    public static void ReplaceElement(int collum, int row, ref BoardElement[, ] positions, ref bool[, ] matchedElemPositions, Transform[] holders, ref List<AnimationMessage> playingAnimations, float swappingSpeed) {
 
         CheckIfElementAtPositionIsNull(collum, row, positions);
 
@@ -248,30 +250,19 @@ public static class BoardFunctions {
         //         }
         //     }
         // }
-#endregion
+
         //   for (int row = positions.GetLength(1) - 1; row > -1; row--) {
         //      for (int collum = 0; collum < positions.GetLength(0); collum++) {
         //if (positionsDestroyed[collum, row] == true) {
-        float cashElementChance = Random.Range(0, 100);
+
         // int maxScorePossible = 0;
         // if (maxScorePossible > maxScoreAllowed) {
         //     Debug.LogError("CurrentMaxScorePossible: " + maxScorePossible + " exceeds maxScoreAllowed: " + maxScorePossible);
         // }
-        if (chanchesForCashElement >= cashElementChance) {
-            positions[collum, row] = new CashBoardElement(positions[collum, row].GetAttachedGameObject(), positions[collum, row].GetChildIndex(), cashElementValue);
-
-        }
-        else if (positions[collum, row].GetElementClassType() == typeof(CashBoardElement)) {
-            Color newColor = BoardFunctions.availColors[Random.Range(0, BoardFunctions.availColors.Length)];
-            positions[collum, row] = new BoardElement(positions[collum, row].GetAttachedGameObject(), positions[collum, row].GetChildIndex(), newColor);
-        }
-        else {
-            Color newColor = BoardFunctions.availColors[Random.Range(0, BoardFunctions.availColors.Length)];
-            positions[collum, row].OnElementAppearance(newColor);
-        }
+#endregion
 
         playingAnimations.Add(new AnimationMessage(positions[collum, row].GetChildIndex(), positions[collum, row].GetElementSprite(), positions[collum, row].GetElementValue()));
-
+#region Score check
         // if (maxScorePossible >= 1) {
         //     AlexDebugger.GetInstance().AddMessage("Element: " + positions[collum, row] + " was created wihh a potential output of " + maxScorePossible, AlexDebugger.tags.Step4);
         // }
@@ -284,7 +275,7 @@ public static class BoardFunctions {
         //}
         // }
         // }
-
+#endregion
         playingAnimations.Add(new AnimationMessage(Animations.AnimationTypes.MoveTo, positions[collum, row].GetChildIndex(), 2000000, holders[collum].position.x, holders[collum].position.y, holders[collum].position.z));
         playingAnimations.Add(new AnimationMessage(Animations.AnimationTypes.ScaleToOne, positions[collum, row].GetChildIndex(), 200));
         playingAnimations.Add(new AnimationMessage(Animations.AnimationTypes.MoveTo, positions[collum, row].GetChildIndex(), swappingSpeed, originalPos.x, originalPos.y, originalPos.z));
@@ -296,7 +287,7 @@ public static class BoardFunctions {
     /// <summary>Play scale-to-zero effect on element's transform</summary>
     public static void PlayMatchEffect(int collum, int row, BoardElement[, ] positions, ref List<AnimationMessage> playingAnimations, float swappingSpeed) {
         AlexDebugger.GetInstance().AddMessage("####### Scale to zero effect for " + positions[collum, row].GetAttachedGameObject().name, AlexDebugger.tags.Effects);
-        positions[collum, row].OnElementDestruction();
+
         playingAnimations.Add(new AnimationMessage(Animations.AnimationTypes.ScaleToZero, positions[collum, row].GetChildIndex(), swappingSpeed));
     }
 
@@ -478,6 +469,259 @@ public static class BoardFunctions {
         return null;
     }
 
+    public static BoardElement CreateNewElement(BoardElement previousElement, System.Type boardElementType) {
+
+        if (boardElementType == typeof(CashBoardElement)) {
+            previousElement = new CashBoardElement(previousElement.GetAttachedGameObject(), previousElement.GetChildIndex(), FixedElementData.cashElementValue);
+        }
+        else if (boardElementType == typeof(CrossBoardElement)) {
+            Color newColor = BoardFunctions.availColors[Random.Range(0, BoardFunctions.availColors.Length)];
+            previousElement = new CrossBoardElement(previousElement.GetAttachedGameObject(), previousElement.GetChildIndex(), previousElement.GetElementValue());
+        }
+        else if (boardElementType == typeof(BombBoardElement)) {
+            previousElement = new BombBoardElement(previousElement.GetAttachedGameObject(), previousElement.GetChildIndex());
+        }
+        else if (boardElementType == typeof(BellBoardElement)) {
+            previousElement = new BellBoardElement(previousElement.GetAttachedGameObject(), previousElement.GetChildIndex());
+        }
+        else {
+            if (previousElement.GetElementClassType() != typeof(BoardElement)) {
+                Color newColor = BoardFunctions.availColors[Random.Range(0, BoardFunctions.availColors.Length)];
+                previousElement = new BoardElement(previousElement.GetAttachedGameObject(), previousElement.GetChildIndex(), newColor);
+            }
+            else {
+                Color newColor = BoardFunctions.availColors[Random.Range(0, BoardFunctions.availColors.Length)];
+                previousElement.OnElementAppearance(newColor);
+            }
+        }
+        return previousElement;
+    }
+
+    public static bool DestroyBoardElement(int collum, int row, ref BoardElement[, ] positions, ref bool[, ] matchedElemPositions, ref List<AnimationMessage> playingAnimations, BoardElement lastElementProccesed) {
+        AlexDebugger.GetInstance().AddMessage("Element: " + positions[collum, row].GetAttachedGameObject().transform.name + "  was a match of color: " + positions[collum, row].GetElementValue().ToString() + ", de-activating highlight.", AlexDebugger.tags.Step2);
+        if (positions[collum, row].GetElementClassType() == typeof(BombBoardElement) || positions[collum, row].GetElementClassType() == typeof(CrossBoardElement)) {
+            if (positions[collum, row].OnElementDestruction(positions, ref matchedElemPositions)) {
+                return true;
+            }
+        }
+        else if (positions[collum, row].GetElementClassType() == typeof(BellBoardElement)) {
+            if (positions[collum, row].OnElementDestruction(ref positions, ref matchedElemPositions, ref playingAnimations, lastElementProccesed)) {
+                return true;
+            }
+        }
+        else {
+            if (positions[collum, row].OnElementDestruction(positions)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public static void DestroyAllElementsCrossStyle(int crossElementCollum, int crossElementRow, ref bool[, ] matchedElements) {
+        for (int row = 0; row < matchedElements.GetLength(1); row++) {
+            matchedElements[crossElementCollum, row] = true;
+        }
+        for (int collum = 0; collum < matchedElements.GetLength(0); collum++) {
+            matchedElements[collum, crossElementRow] = true;
+        }
+    }
+    public static void DestroyElementsBombStyle(int bombElementCollum, int bombElementRow, ref bool[, ] matchedElements) {
+        for (int row = bombElementRow - 2; row <= bombElementRow + 2; row++) {
+            if (row < 0 || row >= matchedElements.GetLength(1)) {
+                continue;
+            }
+            matchedElements[bombElementCollum, row] = true;
+            if (row == bombElementRow - 1 || row == bombElementRow + 1) {
+                if (bombElementRow - 1 > -1 && bombElementRow + 1 < matchedElements.GetLength(1)) {
+                    if (bombElementCollum - 1 > -1) {
+                        matchedElements[bombElementCollum - 1, row] = true;
+                    }
+                    if (bombElementCollum + 1 < matchedElements.GetLength(0)) {
+                        matchedElements[bombElementCollum + 1, row] = true;
+                    }
+                }
+            }
+        }
+        for (int collum = bombElementCollum - 2; collum <= bombElementCollum + 2; collum++) {
+            if (collum < 0 || collum >= matchedElements.GetLength(0)) {
+                continue;
+            }
+            matchedElements[collum, bombElementRow] = true;
+        }
+    }
+    public static void DestroyElementsCrossBombStyle(int bombElementCollum, int bombElementRow, ref bool[, ] matchedElements) {
+
+        for (int row = bombElementRow - 2; row <= bombElementRow + 2; row++) {
+            for (int collum = bombElementCollum - 2; collum <= bombElementCollum + 2; collum++) {
+                if (row < 0 || row >= matchedElements.GetLength(1)) {
+                    continue;
+                }
+                if (collum < 0 || collum >= matchedElements.GetLength(0)) {
+                    continue;
+                }
+                matchedElements[collum, row] = true;
+            }
+        }
+    }
+
+    public static void DestroyElementsDoubleBombStyle(int bombElementCollum, int bombElementRow, ref bool[, ] matchedElements) {
+        if (bombElementRow - 3 > 0) {
+            matchedElements[bombElementCollum, bombElementRow - 3] = true;
+        }
+        if (bombElementRow + 3 < matchedElements.GetLength(1)) {
+            matchedElements[bombElementCollum, bombElementRow + 3] = true;
+        }
+        if (bombElementCollum - 3 > 0) {
+            matchedElements[bombElementCollum - 3, bombElementRow] = true;
+        }
+        if (bombElementCollum + 3 < matchedElements.GetLength(0)) {
+            matchedElements[bombElementCollum + 3, bombElementRow] = true;
+        }
+
+        for (int row = bombElementRow - 2; row <= bombElementRow + 2; row++) {
+            for (int collum = bombElementCollum - 2; collum <= bombElementCollum + 2; collum++) {
+                if (row < 0 || row >= matchedElements.GetLength(1)) {
+                    continue;
+                }
+                if (collum < 0 || collum >= matchedElements.GetLength(0)) {
+                    continue;
+                }
+                matchedElements[collum, row] = true;
+            }
+        }
+    }
+
+    public static void ActivateBellFunction(ref BoardElement[, ] positions, ref bool[, ] matchedElements, Color valueOfElement, ref List<AnimationMessage> playingAnimations, BoardElement secondElement) {
+        for (int row = 0; row < positions.GetLength(1); row++) {
+            for (int collum = 0; collum < positions.GetLength(0); collum++) {
+                if (secondElement.GetElementClassType() == typeof(BoardElement)) {
+                    if (positions[collum, row].GetElementValue() == valueOfElement && positions[collum, row].GetElementClassType() == typeof(BoardElement)) {
+                        playingAnimations.Add(new AnimationMessage(positions[collum, row].GetChildIndex(), AssetLoader.GetBellElementSprite(), Color.white));
+                        positions[collum, row].OnElementDestruction(positions);
+                        matchedElements[collum, row] = true;
+                    }
+                }
+                else if (secondElement.GetElementClassType() == typeof(CrossBoardElement)) {
+                    if (positions[collum, row].GetElementValue() == valueOfElement && positions[collum, row].GetElementClassType() == typeof(BoardElement)) {
+                        positions[collum, row] = new CrossBoardElement(positions[collum, row].GetAttachedGameObject(), positions[collum, row].GetChildIndex(), positions[collum, row].GetElementValue());
+                        playingAnimations.Add(new AnimationMessage(positions[collum, row].GetChildIndex(), AssetLoader.GetCrossElementSprite(), positions[collum, row].GetElementValue()));
+                        positions[collum, row].OnElementDestruction(positions, ref matchedElements);
+                        matchedElements[collum, row] = true;
+                    }
+                }
+                else if (secondElement.GetElementClassType() == typeof(BombBoardElement)) {
+                    if (positions[collum, row].GetElementClassType() == typeof(BombBoardElement)) {
+                        positions[collum, row].OnElementDestruction(positions, ref matchedElements);
+                        matchedElements[collum, row] = true;
+                    }
+                }
+                else if (secondElement.GetElementClassType() == typeof(BellBoardElement)) {
+
+                    playingAnimations.Add(new AnimationMessage(positions[collum, row].GetChildIndex(), AssetLoader.GetBellElementSprite(), Color.white));
+                    if (positions[collum, row].GetElementClassType() != typeof(CashBoardElement)) {
+                        positions[collum, row] = new BoardElement(positions[collum, row].GetAttachedGameObject(), positions[collum, row].GetChildIndex(), Color.white);
+                    }
+                    positions[collum, row].OnElementDestruction(positions);
+                    matchedElements[collum, row] = true;
+                }
+            }
+        }
+    }
+
+    public static bool GetChances(float chances) {
+        if (chances >= Random.Range(0, 100)) {
+            return true;
+        }
+        else {
+            return false;
+        }
+    }
+
+    public static bool GetIfMatchCreatesBell(int collum, int row, BoardElement[, ] positions, ref bool[, ] searchedElements) {
+        if (!searchedElements[collum, row]) {
+
+            int numberOfRightMatches = CheckRightNeighboursForMatches(collum, row, positions, searchedElements.GetLength(0));
+            if (numberOfRightMatches >= 4) {
+                for (int i = collum; i < collum + 4; i++) {
+                    if (i < searchedElements.GetLength(0)) {
+                        searchedElements[i, row] = true;
+                    }
+
+                }
+                searchedElements[collum, row] = true;
+                return true;
+            }
+            int numberOfBottomMatches = CheckBottomNeighboursForMatches(collum, row, positions, searchedElements.GetLength(1));
+            if (numberOfBottomMatches >= 4) {
+                for (int i = row; i < row + 4; i++) {
+                    if (i < searchedElements.GetLength(1)) {
+                        searchedElements[collum, i] = true;
+                    }
+
+                }
+                searchedElements[collum, row] = true;
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public static bool GetIfMatchCreatesBomb(int collum, int row, BoardElement[, ] positions, ref bool[, ] searchedElements) {
+        if (!searchedElements[collum, row]) {
+            int numberOfRightMatches = CheckRightNeighboursForMatches(collum, row, positions, searchedElements.GetLength(0));
+            int numberOfLeftMatches = CheckLeftNeighboursForMatches(collum, row, positions);
+            int numberOfBottomMatches = CheckBottomNeighboursForMatches(collum, row, positions, searchedElements.GetLength(1));
+            int numberOfTopMatches = CheckUpperNeighboursForMatches(collum, row, positions);
+
+            if (numberOfRightMatches >= 1 && numberOfLeftMatches >= 1 && numberOfBottomMatches >= 1) {
+                Debug.LogError(positions[collum, row].GetAttachedGameObject().name + " created a bomb match");
+                searchedElements[collum + 1, row] = true;
+                searchedElements[collum - 1, row] = true;
+                searchedElements[collum, row + 1] = true;
+                searchedElements[collum, row + 2] = true;
+                searchedElements[collum, row] = true;
+                return true;
+
+            }
+            else if (numberOfRightMatches >= 2 && numberOfTopMatches >= 2) {
+                searchedElements[collum + 1, row] = true;
+                searchedElements[collum + 2, row] = true;
+                searchedElements[collum, row + 1] = true;
+                searchedElements[collum, row + 2] = true;
+                searchedElements[collum, row] = true;
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public static bool GetIfMatchCreatesCross(int collum, int row, BoardElement[, ] positions, ref bool[, ] searchedElements) {
+        if (!searchedElements[collum, row]) {
+            int numberOfRightMatches = CheckRightNeighboursForMatches(collum, row, positions, searchedElements.GetLength(0));
+            if (numberOfRightMatches >= 3) {
+                for (int i = collum; i < collum + 3; i++) {
+                    if (i < searchedElements.GetLength(0)) {
+                        searchedElements[i, row] = true;
+                    }
+
+                }
+                searchedElements[collum, row] = true;
+                return true;
+            }
+            int numberOfBottomMatches = CheckBottomNeighboursForMatches(collum, row, positions, searchedElements.GetLength(1));
+            if (numberOfBottomMatches >= 3) {
+                for (int i = row; i < row + 3; i++) {
+                    if (i < searchedElements.GetLength(1)) {
+                        searchedElements[collum, i] = true;
+                    }
+
+                }
+                searchedElements[collum, row] = true;
+                return true;
+            }
+        }
+        return false;
+    }
 #region Debug
     public static void CheckIfElementAtPositionIsNull(int collum, int row, BoardElement[, ] positions) {
 #if UNITY_EDITOR

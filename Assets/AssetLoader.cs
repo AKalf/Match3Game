@@ -5,33 +5,42 @@ using UnityEngine;
 public class AssetLoader : MonoBehaviour {
     private static class PathManager {
 
-        private static string boardElementDefaultIcon = "SquareIcon";
+        public const string boardElementDefaultIconPath = "SquareIcon";
 
-        public static string GetBoardElementDefaultIconPath() {
-            return boardElementDefaultIcon;
-        }
+        public const string boardElementCashIconPath = "CoinIcon";
 
-        private static string boardElementCashIcon = "CoinIcon";
+        public const string boardElementCrossIconPath = "CrossIcon";
 
-        public static string GetBoardElementCashIconPath() {
-            return boardElementCashIcon;
-        }
+        public const string boardElementBombIconPath = "BombIcon";
+
+        public const string boardElementBellIconPath = "BellIcon";
 
     }
 
-    [SerializeField]
     Sprite defaultElementSprite = null;
-    [SerializeField]
+
     Sprite cashElementSprite = null;
 
+    Sprite crossElementSprite = null;
+
+    Sprite bombElementSprite = null;
+
+    Sprite bellElementSprite = null;
+
+    //TO-DO: proper singleton
     private static AssetLoader inst;
 
     private void Awake() {
         inst = this;
-        //   defaultElementSprite = (Sprite) Resources.Load(PathManager.GetBoardElementDefaultIconPath(), typeof(Sprite));
-        Debug.Log("Sprite: " + defaultElementSprite.name);
-        // cashElementSprite = (Sprite) Resources.Load(PathManager.GetBoardElementCashIconPath(), typeof(Sprite));
-        Debug.Log("Sprite: " + cashElementSprite.name);
+        defaultElementSprite = (Sprite) Resources.Load(PathManager.boardElementDefaultIconPath, typeof(Sprite));
+        //Debug.Log("Sprite: " + defaultElementSprite.name);
+        cashElementSprite = (Sprite) Resources.Load(PathManager.boardElementCashIconPath, typeof(Sprite));
+        //Debug.Log("Sprite: " + cashElementSprite.name);
+        crossElementSprite = (Sprite) Resources.Load(PathManager.boardElementCrossIconPath, typeof(Sprite));
+
+        bombElementSprite = (Sprite) Resources.Load(PathManager.boardElementBombIconPath, typeof(Sprite));
+
+        bellElementSprite = (Sprite) Resources.Load(PathManager.boardElementBellIconPath, typeof(Sprite));
     }
     // Start is called before the first frame update
     void Start() {
@@ -47,6 +56,15 @@ public class AssetLoader : MonoBehaviour {
     }
     public static Sprite GetCashElementSprite() {
         return inst.cashElementSprite;
+    }
+    public static Sprite GetCrossElementSprite() {
+        return inst.crossElementSprite;
+    }
+    public static Sprite GetBombElementSprite() {
+        return inst.bombElementSprite;
+    }
+    public static Sprite GetBellElementSprite() {
+        return inst.bellElementSprite;
     }
 
 }

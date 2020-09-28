@@ -14,6 +14,8 @@ public class BoardElement {
     protected Color colorValue = Color.black;
 
     protected Sprite elementSprite = null;
+
+    protected bool hasBeenDestroyed = false;
     public BoardElement(GameObject gameobjectToAttach, int indexInParent, Color colorValue) {
         thisType = typeof(BoardElement);
         attachedGameobject = gameobjectToAttach;
@@ -38,10 +40,21 @@ public class BoardElement {
     /// </summary>
     /// <param name="newValue">The new color value of the element to set</param>
     public virtual void OnElementAppearance(Color newValue) {
+        hasBeenDestroyed = false;
         this.colorValue = newValue;
     }
-    public virtual void OnElementDestruction() {
+    public virtual bool OnElementDestruction(BoardElement[, ] positions) {
+        hasBeenDestroyed = true;
+        return false;
+    }
+    public virtual bool OnElementDestruction(BoardElement[, ] positions, ref bool[, ] matchedElementsPositions) {
+        hasBeenDestroyed = true;
+        return false;
+    }
 
+    public virtual bool OnElementDestruction(ref BoardElement[, ] positions, ref bool[, ] matchedElementsPositions, ref List<AnimationMessage> playingAnimations, BoardElement otherElement) {
+        hasBeenDestroyed = true;
+        return false;
     }
 
     public Color GetElementValue() {
@@ -61,8 +74,7 @@ public class BoardElement {
 
 public class CashBoardElement : BoardElement {
 
-    int cashValue = 0;
-    bool hasBeenDestroyed = false;
+    private int cashValue = 0;
 
     public CashBoardElement(GameObject gameObjectToAttach, int indexInParent, int cashValue):
         base(gameObjectToAttach, indexInParent, Color.white) {
@@ -73,14 +85,122 @@ public class CashBoardElement : BoardElement {
         }
 
     public override void OnElementAppearance(Color newValue) {
-
+        hasBeenDestroyed = false;
     }
-    public override void OnElementDestruction() {
-        base.OnElementDestruction();
-        if (!hasBeenDestroyed) {
-            hasBeenDestroyed = true;
-            MoneyManager.ChangeBalanceBy(cashValue);
+    public override bool OnElementDestruction(BoardElement[, ] positions) {
+        if (hasBeenDestroyed) {
+            return false;
         }
+        MoneyManager.ChangeBalanceBy(GetCashValue());
+        hasBeenDestroyed = true;
+        return false;
     }
 
+    public int GetCashValue() {
+        return cashValue;
+    }
+
+}
+
+public class CrossBoardElement : BoardElement {
+
+    public CrossBoardElement(GameObject gameObjectToAttach, int indexInParent, Color colorValue):
+        base(gameObjectToAttach, indexInParent, colorValue) {
+
+            base.elementSprite = AssetLoader.GetCrossElementSprite();
+            base.thisType = typeof(CrossBoardElement);
+        }
+
+    public override void OnElementAppearance(Color newValue) {
+        this.colorValue = newValue;
+        hasBeenDestroyed = false;
+    }
+
+    public override bool OnElementDestruction(BoardElement[, ] positions, ref bool[, ] matchedElementsPositions) {
+        if (hasBeenDestroyed) {
+            return false;
+        }
+        KeyValuePair<int, int> pos = BoardFunctions.GetPositionOfElement(this, positions);
+        BoardFunctions.DestroyAllElementsCrossStyle(pos.Key, pos.Value, ref matchedElementsPositions);
+        matchedElementsPositions[pos.Key, pos.Value] = true;
+        hasBeenDestroyed = true;
+        return true;
+
+    }
+}
+public class BombBoardElement : BoardElement {
+
+    public enum BombExplosionStyle { NormalStyle, CrossStyle, DoubleBombStyle }
+
+    private BombExplosionStyle thisBombStyle = BombExplosionStyle.NormalStyle;
+
+    public BombBoardElement(GameObject gameObjectToAttach, int indexInParent):
+        base(gameObjectToAttach, indexInParent, Color.white) {
+
+            base.elementSprite = AssetLoader.GetBombElementSprite();
+            base.thisType = typeof(BombBoardElement);
+            base.colorValue = Color.white;
+        }
+
+    public override void OnElementAppearance(Color newValue) {
+        base.colorValue = Color.white;
+        hasBeenDestroyed = false;
+    }
+
+    public override bool OnElementDestruction(BoardElement[, ] positions, ref bool[, ] matchedElementsPositions) {
+        if (hasBeenDestroyed) {
+            return false;
+        }
+        KeyValuePair<int, int> pos = BoardFunctions.GetPositionOfElement(this, positions);
+        switch (thisBombStyle) {
+            case BombExplosionStyle.CrossStyle:
+                BoardFunctions.DestroyAllElementsCrossStyle(pos.Key, pos.Value, ref matchedElementsPositions);
+                break;
+            case BombExplosionStyle.DoubleBombStyle:
+                BoardFunctions.DestroyElementsDoubleBombStyle(pos.Key, pos.Value, ref matchedElementsPositions);
+                break;
+            case BombExplosionStyle.NormalStyle:
+                BoardFunctions.DestroyElementsBombStyle(pos.Key, pos.Value, ref matchedElementsPositions);
+                break;
+            default:
+                BoardFunctions.DestroyElementsBombStyle(pos.Key, pos.Value, ref matchedElementsPositions);
+                break;
+        }
+        matchedElementsPositions[pos.Key, pos.Value] = true;
+        hasBeenDestroyed = true;
+        return true;
+
+    }
+    public void SetExplosionStyleTo(BombExplosionStyle style) {
+        thisBombStyle = style;
+    }
+}
+public class BellBoardElement : BoardElement {
+
+    public BellBoardElement(GameObject gameObjectToAttach, int indexInParent):
+        base(gameObjectToAttach, indexInParent, Color.white) {
+
+            base.elementSprite = AssetLoader.GetBellElementSprite();
+            base.thisType = typeof(BellBoardElement);
+        }
+
+    public override void OnElementAppearance(Color newValue) {
+        base.colorValue = Color.white;
+        hasBeenDestroyed = false;
+    }
+
+    public override bool OnElementDestruction(ref BoardElement[, ] positions, ref bool[, ] matchedElementsPositions, ref List<AnimationMessage> playingAnimations, BoardElement otherElement) {
+        if (hasBeenDestroyed) {
+            return false;
+        }
+        if (otherElement == null) {
+            Debug.LogError(GetAttachedGameObject().name + " Bell OnElementDestruction() triggered with null as gameobject");
+        }
+        KeyValuePair<int, int> pos = BoardFunctions.GetPositionOfElement(this, positions);
+        BoardFunctions.ActivateBellFunction(ref positions, ref matchedElementsPositions, otherElement.GetElementValue(), ref playingAnimations, otherElement);
+        matchedElementsPositions[pos.Key, pos.Value] = true;
+        hasBeenDestroyed = true;
+        return true;
+
+    }
 }

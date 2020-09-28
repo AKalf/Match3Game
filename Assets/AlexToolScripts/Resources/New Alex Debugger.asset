@@ -13,6 +13,6 @@ MonoBehaviour:
   m_Name: New Alex Debugger
   m_EditorClassIdentifier: 
   inst: {fileID: 11400000}
-  ignoredTag: 
+  ignoredTag: 00000000010000000200000003000000040000000b000000
   messages: []
   clearMessagesOnPlay: 1
