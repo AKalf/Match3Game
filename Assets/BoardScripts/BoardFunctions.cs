@@ -95,7 +95,6 @@ public static class BoardFunctions {
             if (positions[collum, row].GetElementValue() == positions[collum, row + 1].GetElementValue()) {
                 numberOfElem++;
                 numberOfElem += BoardFunctions.CheckBottomNeighboursForMatches(collum, row + 1, positions, rowsNumbers);
-
             }
         }
         return numberOfElem;

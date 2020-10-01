@@ -16,7 +16,8 @@ public class DetailsManager : MonoBehaviour {
     private void Awake() {
         if (instance == null) {
             instance = this;
-        } else if (instance != this) {
+        }
+        else if (instance != this) {
             Destroy(this);
         }
     }
@@ -50,19 +51,19 @@ public class DetailsManager : MonoBehaviour {
     public static void ChangeBalanceTextTo(float amount) {
 #if UNITY_EDITOR
         if (amount < 0) {
-            Debug.LogError("Negative value was passed for score text");
+            Debug.LogError("Negative value was passed for balance text");
         }
 #endif
-        balanceText.text = "Score: " + amount.ToString();
+        balanceText.text = "Balance: " + amount.ToString();
     }
 
     public static void ChangeSwapCostTo(float amount) {
 #if UNITY_EDITOR
         if (amount < 0) {
-            Debug.LogError("Negative value was passed for score text");
+            Debug.LogError("Negative value was passed for swap cost text");
         }
 #endif
-        swapCostText.text = "Score: " + amount.ToString();
+        swapCostText.text = "Swap cost: " + amount.ToString();
     }
 
 }
