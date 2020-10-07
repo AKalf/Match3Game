@@ -104,7 +104,6 @@ public static class BoardFunctions {
     /// <summary> Returns the number of elements matched towards left </summary>
     public static int CheckLeftNeighboursForMatches(int collum, int row, BoardElement[, ] positions) {
         int numberOfElem = 0;
-
         if (collum - 1 > -1) {
             if (positions[collum - 1, row].GetElementValue() == Color.white) {
                 return 0;
@@ -112,12 +111,11 @@ public static class BoardFunctions {
             if (positions[collum, row].GetElementValue() == positions[collum - 1, row].GetElementValue()) {
                 numberOfElem++;
                 numberOfElem += BoardFunctions.CheckLeftNeighboursForMatches(collum - 1, row, positions);
-
             }
-
         }
         return numberOfElem;
     }
+
     /// <summary> Returns the number of elements matched towards right </summary>
     public static int CheckRightNeighboursForMatches(int collum, int row, BoardElement[, ] positions, int collumsNumber) {
         int numberOfElem = 0;
@@ -128,7 +126,6 @@ public static class BoardFunctions {
             if (positions[collum, row].GetElementValue() == positions[collum + 1, row].GetElementValue()) {
                 numberOfElem++;
                 numberOfElem += BoardFunctions.CheckRightNeighboursForMatches(collum + 1, row, positions, collumsNumber);
-
             }
         }
         return numberOfElem;
@@ -140,7 +137,7 @@ public static class BoardFunctions {
     /// position 0: number of matches that create a cross
     /// position 1: number of matches create a bomb
     /// position 2: number of matches create a bell</returns>
-    public static int CheckForMatches(int startCollum, int startRow, BoardElement[, ] positions, ref bool[, ] matchedElemPositions, int collumsNumber, int rowsNumber, bool shouldFlag = true) {
+    public static int CheckElementForMatches(int startCollum, int startRow, BoardElement[, ] positions, ref bool[, ] matchedElemPositions, int collumsNumber, int rowsNumber, bool shouldFlag = true) {
 
         int upperMatches = BoardFunctions.CheckUpperNeighboursForMatches(startCollum, startRow, positions);
         int bottomMatches = BoardFunctions.CheckBottomNeighboursForMatches(startCollum, startRow, positions, rowsNumber);
@@ -217,7 +214,7 @@ public static class BoardFunctions {
 
     /// <summary>Re-creates destroyed elements, by moving them to holders position and then making a drop effect</summary>
     /// <returns>The best score that can be reached if swapped with neighbour</returns>
-    public static void ReplaceElement(int collum, int row, ref BoardElement[, ] positions, ref bool[, ] matchedElemPositions, Transform[] holders, ref List<AnimationMessage> playingAnimations, float swappingSpeed) {
+    public static void ReplaceElementAnimations(int collum, int row, ref BoardElement[, ] positions, ref bool[, ] matchedElemPositions, Transform[] holders, ref List<AnimationMessage> playingAnimations, float swappingSpeed) {
 
         CheckIfElementAtPositionIsNull(collum, row, positions);
 
@@ -284,20 +281,24 @@ public static class BoardFunctions {
     }
 
     /// <summary>Play scale-to-zero effect on element's transform</summary>
-    public static void PlayMatchEffect(int collum, int row, BoardElement[, ] positions, ref List<AnimationMessage> playingAnimations, float swappingSpeed) {
+    public static void PlayMatchEffectAnimations(int collum, int row, BoardElement[, ] positions, ref List<AnimationMessage> playingAnimations, float swappingSpeed) {
         AlexDebugger.GetInstance().AddMessage("####### Scale to zero effect for " + positions[collum, row].GetAttachedGameObject().name, AlexDebugger.tags.Effects);
 
         playingAnimations.Add(new AnimationMessage(Animations.AnimationTypes.ScaleToZero, positions[collum, row].GetChildIndex(), swappingSpeed));
     }
 
     /// <summary>Checks each element on the board for matches and flags them</summary>
-    public static int CheckBoardForMatches(BoardElement[, ] positions, ref bool[, ] matchedElemPositions, int collumsNumber, int rowsNumber) {
+    public static int
+    CheckBoardForMatches(BoardElement[, ] positions, ref bool[, ] matchedElemPositions, int collumsNumber, int rowsNumber) {
         AlexDebugger.GetInstance().AddMessage("Checking board for new matches...", AlexDebugger.tags.Aftermatch);
         int totalMatches = 0;
         // Search for matches and flag them
         for (int row = 0; row < positions.GetLength(1); row++) {
             for (int collum = 0; collum < positions.GetLength(0); collum++) {
-                totalMatches += CheckForMatches(collum, row, positions, ref matchedElemPositions, collumsNumber, rowsNumber, true);
+                if (matchedElemPositions[collum, row] == true) {
+                    continue;
+                }
+                totalMatches += CheckElementForMatches(collum, row, positions, ref matchedElemPositions, collumsNumber, rowsNumber, true);
                 // case of cash element has reached bottom
                 if (row == positions.GetLength(1) - 1 && positions[collum, row].GetElementClassType() == typeof(CashBoardElement)) {
                     matchedElemPositions[collum, row] = true;
@@ -313,11 +314,11 @@ public static class BoardFunctions {
     }
 
     /// <summary>Check if with input it can create matches. Returns best score found </summary>
-    public static int isPotentialInput(int collum, int row, BoardElement[, ] positions, bool[, ] matchedElemPositions, int totalCollums, int totalRows) {
+    public static int IsPotentialInput(int collum, int row, BoardElement[, ] positions, bool[, ] matchedElemPositions, int totalCollums, int totalRows) {
         int possibleScore = 0;
         if (row - 1 > -1) {
             BoardFunctions.SwapBoardElementNeighbours(positions[collum, row], positions[collum, row - 1], ref positions);
-            int matches = BoardFunctions.CheckForMatches(collum, row - 1, positions, ref matchedElemPositions, totalCollums, totalRows, false);
+            int matches = BoardFunctions.CheckElementForMatches(collum, row - 1, positions, ref matchedElemPositions, totalCollums, totalRows, false);
             if (matches > 0) {
                 BoardFunctions.SwapBoardElementNeighbours(positions[collum, row], positions[collum, row - 1], ref positions);
                 possibleScore = matches;
@@ -328,7 +329,7 @@ public static class BoardFunctions {
         }
         if (row + 1 < totalRows) {
             BoardFunctions.SwapBoardElementNeighbours(positions[collum, row], positions[collum, row + 1], ref positions);
-            int matches = BoardFunctions.CheckForMatches(collum, row + 1, positions, ref matchedElemPositions, totalCollums, totalRows, false);
+            int matches = BoardFunctions.CheckElementForMatches(collum, row + 1, positions, ref matchedElemPositions, totalCollums, totalRows, false);
             if (matches > 0) {
                 BoardFunctions.SwapBoardElementNeighbours(positions[collum, row], positions[collum, row + 1], ref positions);
                 if (possibleScore < matches) {
@@ -342,7 +343,7 @@ public static class BoardFunctions {
         }
         if (collum - 1 > -1) {
             BoardFunctions.SwapBoardElementNeighbours(positions[collum, row], positions[collum - 1, row], ref positions);
-            int matches = BoardFunctions.CheckForMatches(collum - 1, row, positions, ref matchedElemPositions, totalCollums, totalRows, false);
+            int matches = BoardFunctions.CheckElementForMatches(collum - 1, row, positions, ref matchedElemPositions, totalCollums, totalRows, false);
             if (matches > 0) {
                 BoardFunctions.SwapBoardElementNeighbours(positions[collum, row], positions[collum - 1, row], ref positions);
                 if (possibleScore < matches) {
@@ -355,7 +356,7 @@ public static class BoardFunctions {
         }
         if (collum + 1 < totalCollums) {
             BoardFunctions.SwapBoardElementNeighbours(positions[collum, row], positions[collum + 1, row], ref positions);
-            int matches = BoardFunctions.CheckForMatches(collum + 1, row, positions, ref matchedElemPositions, totalCollums, totalRows, false);
+            int matches = BoardFunctions.CheckElementForMatches(collum + 1, row, positions, ref matchedElemPositions, totalCollums, totalRows, false);
             if (matches > 0) {
                 BoardFunctions.SwapBoardElementNeighbours(positions[collum, row], positions[collum + 1, row], ref positions);
                 if (possibleScore < matches) {
@@ -418,7 +419,7 @@ public static class BoardFunctions {
             }
             positions[collum, row].OnElementAppearance(GetAvailableColors() [index]);
 
-            int potentialScore = isPotentialInput(collum, row, positions, matchedElemPositions, totalCollums, totalRows);
+            int potentialScore = IsPotentialInput(collum, row, positions, matchedElemPositions, totalCollums, totalRows);
             //Debug.Log("### Potential score: " + potentialScore);
             positions[collum, row].OnElementAppearance(originalColor);
             if (potentialScore <= maxScoreAllowed && potentialScore > bestPossibleScoreFound) {
@@ -524,6 +525,7 @@ public static class BoardFunctions {
             matchedElements[collum, crossElementRow] = true;
         }
     }
+
     public static void DestroyElementsBombStyle(int bombElementCollum, int bombElementRow, ref bool[, ] matchedElements) {
         for (int row = bombElementRow - 2; row <= bombElementRow + 2; row++) {
             if (row < 0 || row >= matchedElements.GetLength(1)) {
@@ -671,7 +673,10 @@ public static class BoardFunctions {
             int numberOfLeftMatches = CheckLeftNeighboursForMatches(collum, row, positions);
             int numberOfBottomMatches = CheckBottomNeighboursForMatches(collum, row, positions, searchedElements.GetLength(1));
             int numberOfTopMatches = CheckUpperNeighboursForMatches(collum, row, positions);
-
+            Debug.Log("Checking for bomb");
+            Debug.Log("left: " + numberOfLeftMatches);
+            Debug.Log("right: " + numberOfRightMatches);
+            Debug.Log("bottom: " + numberOfBottomMatches);
             if (numberOfRightMatches >= 1 && numberOfLeftMatches >= 1 && numberOfBottomMatches >= 1) {
                 Debug.LogError(positions[collum, row].GetAttachedGameObject().name + " created a bomb match");
                 searchedElements[collum + 1, row] = true;

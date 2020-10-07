@@ -94,23 +94,30 @@ public class BoardManager : MonoBehaviour {
         int collumIndex = 0;
 
         // Assign elements to the board
+
+        // foreach gameobject child of gameobject "GamePanel"
         for (int i = 0; i < gamePanel.childCount; i++) {
+            // if in set bounds
             if (collumIndex < totalCollums && rowIndex < totalRows) {
+                // Get a random color
                 int newColorIndex = Random.Range(0, BoardFunctions.GetAvailableColors().Length);
                 Color newColor = BoardFunctions.GetAvailableColors() [newColorIndex];
 
-                GameObject defaultImageChild = new GameObject("defaultImageChild");
-                defaultImageChild.AddComponent<Image>();
-                defaultImageChild.GetComponent<Image>().sprite = AssetLoader.GetDefaultElementSprite();
-                defaultImageChild.GetComponent<Image>().preserveAspect = true;
+                // Create a new gameobject that will hold Image component for this element
+                GameObject imageChild = new GameObject("imageChild");
+                imageChild.AddComponent<Image>();
+                imageChild.GetComponent<Image>().sprite = AssetLoader.GetDefaultElementSprite();
+                imageChild.GetComponent<Image>().preserveAspect = true;
 
-                defaultImageChild.transform.parent = gamePanel.GetChild(i);
-                defaultImageChild.transform.localScale = Vector3.one;
-                defaultImageChild.transform.position = Vector3.zero;
-                defaultImageChild.transform.SetAsFirstSibling();
-
-                positions[collumIndex, rowIndex] = new BoardElement(gamePanel.GetChild(i).gameObject, i, newColor); //gamePanel.GetChild(i).gameObject.AddComponent<BoardElement>();
-
+                // set parent of the new gameobject to current child proccessed
+                imageChild.transform.parent = gamePanel.GetChild(i);
+                imageChild.transform.localScale = Vector3.one;
+                imageChild.transform.position = Vector3.zero;
+                // Set it above the gameobject that holds the "Highlight" Image component
+                imageChild.transform.SetAsFirstSibling();
+                // Create a new BoardElement instance an assign it to positions board
+                positions[collumIndex, rowIndex] = new BoardElement(gamePanel.GetChild(i).gameObject, i, newColor);
+                // new animation to show the default sprite on gameobject
                 playingAnimations.Add(new AnimationMessage(i, AssetLoader.GetDefaultElementSprite(), newColor));
                 //Debug.Log(positions[collumIndex, rowIndex].name + " is at position: c" + collumIndex + ", r" + rowIndex);
                 collumIndex++;
@@ -134,7 +141,7 @@ public class BoardManager : MonoBehaviour {
         for (int row = 0; row < positions.GetLength(1); row++) {
             for (int collum = 0; collum < positions.GetLength(0); collum++) {
                 //positions[collum, row].SetValue(BoardFunctions.GetColorInScore(collum, row, ref positions, matchedElemPositions, totalCollums, totalRows, maxScoreAllowed, ref currentScore, (currentScore >= maxScoreAllowed - 2) ? true : false));
-                if (BoardFunctions.isPotentialInput(collum, row, positions, matchedElemPositions, totalCollums, totalRows) > 0 && !hasPotentialInputs) {
+                if (BoardFunctions.IsPotentialInput(collum, row, positions, matchedElemPositions, totalCollums, totalRows) > 0 && !hasPotentialInputs) {
                     hasPotentialInputs = true;
                 }
 
@@ -153,12 +160,12 @@ public class BoardManager : MonoBehaviour {
         else if (shouldCheckIfInputCreatesMatches) {
             AlexDebugger.GetInstance().AddMessage("Entering Step1: -check if input between-" + firstElement.GetAttachedGameObject().transform.name + " and " + secondElement.GetAttachedGameObject().transform.name + " create matches", AlexDebugger.tags.Step1);
             //Debug.Log("Checking for matches based on input");
-            // About first input
-            if (HandleInputForElement(firstElement, secondElement) || HandleInputForElement(secondElement, firstElement)) {
 
+            // check if input create matches
+            if (HandleInputForElement(firstElement, secondElement) || HandleInputForElement(secondElement, firstElement)) {
+                AlexDebugger.GetInstance().AddMessage("Step1 finished with matches, going to Step2: -play effects for matched elements-, input1:" + firstElement.GetAttachedGameObject().transform.name + ", input2: " + secondElement.GetAttachedGameObject().transform.name, AlexDebugger.tags.Step1);
                 shouldPlayEffects = true;
             }
-            // About second input
 
             if (!shouldPlayEffects) {
                 AlexDebugger.GetInstance().AddMessage("No matches found, when finish, go back to step0: -waiting for input-", AlexDebugger.tags.Step1);
@@ -180,7 +187,7 @@ public class BoardManager : MonoBehaviour {
                         if (BoardFunctions.DestroyBoardElement(collum, row, ref positions, ref matchedElemPositions, ref playingAnimations, lastElementProcessed)) {
                             areThereChangesOnBoard = true;
                         }
-                        BoardFunctions.PlayMatchEffect(collum, row, positions, ref playingAnimations, swappingSpeed);
+                        BoardFunctions.PlayMatchEffectAnimations(collum, row, positions, ref playingAnimations, swappingSpeed);
                     }
                     lastElementProcessed = positions[collum, row];
                     BoardFunctions.ToggleHighlightCell(collum, row, positions, false, highlightColor);
@@ -258,7 +265,7 @@ public class BoardManager : MonoBehaviour {
                         else {
                             positions[collum, row] = BoardFunctions.CreateNewElement(positions[collum, row], typeof(BoardElement));
                         }
-                        BoardFunctions.ReplaceElement(collum, row, ref positions, ref matchedElemPositions, holders, ref playingAnimations, swappingSpeed);
+                        BoardFunctions.ReplaceElementAnimations(collum, row, ref positions, ref matchedElemPositions, holders, ref playingAnimations, swappingSpeed);
                         positionsDestroyed[collum, row] = false;
 
                     }
@@ -291,8 +298,8 @@ public class BoardManager : MonoBehaviour {
                 bool hasPossibleInput = false;
                 for (int row = 0; row < positions.GetLength(1); row++) {
                     for (int collum = 0; collum < positions.GetLength(0); collum++) {
-                        if (BoardFunctions.isPotentialInput(collum, row, positions, matchedElemPositions, totalCollums, totalRows) > 0) {
-                            AlexDebugger.GetInstance().AddMessage(positions[collum, row].GetAttachedGameObject() + " is potential input", AlexDebugger.tags.Step5);
+                        if (BoardFunctions.IsPotentialInput(collum, row, positions, matchedElemPositions, totalCollums, totalRows) > 0) {
+                            //AlexDebugger.GetInstance().AddMessage(positions[collum, row].GetAttachedGameObject() + " is potential input", AlexDebugger.tags.Step5);
                             BoardFunctions.ToggleHighlightCell(collum, row, positions, true, highlightColor);
                             hasPossibleInput = true;
                         }
@@ -371,9 +378,11 @@ public class BoardManager : MonoBehaviour {
         bool areThereMatches = false;
         if (element.GetElementClassType() == typeof(BombBoardElement)) {
             if (otherElement.GetElementClassType() == typeof(CrossBoardElement)) {
+                AlexDebugger.GetInstance().AddMessage(element.GetAttachedGameObject() + " bomb style set to cross", AlexDebugger.tags.Step1);
                 ((BombBoardElement) element).SetExplosionStyleTo(BombBoardElement.BombExplosionStyle.CrossStyle);
             }
             else if (otherElement.GetElementClassType() == typeof(BombBoardElement)) {
+                AlexDebugger.GetInstance().AddMessage(element.GetAttachedGameObject() + " bomb style set to double bomb", AlexDebugger.tags.Step1);
                 ((BombBoardElement) element).SetExplosionStyleTo(BombBoardElement.BombExplosionStyle.DoubleBombStyle);
             }
             element.OnElementDestruction(positions, ref matchedElemPositions);
@@ -381,16 +390,16 @@ public class BoardManager : MonoBehaviour {
             areThereMatches = true;
         }
         else if (element.GetElementClassType() == typeof(BellBoardElement)) {
+            AlexDebugger.GetInstance().AddMessage("first element was a bell, go to step2: -play effects for matched elements-", AlexDebugger.tags.Step1);
             element.OnElementDestruction(ref positions, ref matchedElemPositions, ref playingAnimations, otherElement);
             areThereMatches = true;
         }
         else {
             KeyValuePair<int, int> firstPosition = BoardFunctions.GetPositionOfElement(element, positions);
-            int numberOfMatchesForFirst = BoardFunctions.CheckForMatches(firstPosition.Key, firstPosition.Value, positions, ref matchedElemPositions, totalCollums, totalRows, true);
-            AlexDebugger.GetInstance().AddMessage("Number of matches found for input element: " + element.GetAttachedGameObject().transform.name + " are " + numberOfMatchesForFirst, AlexDebugger.tags.Step1);
+            int numberOfMatchesForFirst = BoardFunctions.CheckElementForMatches(firstPosition.Key, firstPosition.Value, positions, ref matchedElemPositions, totalCollums, totalRows, true);
             // if there are matches
             if (numberOfMatchesForFirst > 0) {
-                AlexDebugger.GetInstance().AddMessage("Matches found for first eleme " + numberOfMatchesForFirst + ", go to step2: -play effects for matched elements-", AlexDebugger.tags.Step1);
+                AlexDebugger.GetInstance().AddMessage("Matches found for first element " + numberOfMatchesForFirst + ", go to step2: -play effects for matched elements-", AlexDebugger.tags.Step1);
                 // allow Update() to play effects
                 areThereMatches = true;
             }
