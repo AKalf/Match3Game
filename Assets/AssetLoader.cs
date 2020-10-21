@@ -5,21 +5,27 @@ using UnityEngine;
 public class AssetLoader : MonoBehaviour {
     private static class PathManager {
 
-        public const string boardElementDefaultIconPath = "SquareIcon";
+        // Sprites
+        public const string boardElementDefaultIconPath = "SpriteResources/SquareIcon";
 
-        public const string boardElementCashIconPath = "CoinIcon";
+        public static readonly string[] boardElementCashIconsPaths = new string[FixedElementData.numberOfCashTypes] { "SpriteResources/WhiteCoinIcon", "SpriteResources/GreyCoinIcon", "SpriteResources/BlueCoinIcon", "SpriteResources/GreenCoinIcon", "SpriteResources/PurpleCoinIcon", "SpriteResources/RedCoinIcon", "SpriteResources/GoldCoinIcon" };
 
-        public const string boardElementCrossIconPath = "CrossIcon";
+        public const string boardElementCrossIconPath = "SpriteResources/CrossIcon";
 
-        public const string boardElementBombIconPath = "BombIcon";
+        public const string boardElementBombIconPath = "SpriteResources/BombIcon";
 
-        public const string boardElementBellIconPath = "BellIcon";
+        public const string boardElementBellIconPath = "SpriteResources/BellIcon";
+
+        // Sound Effects
+        public const string cellDrop_SFX = "";
+
+        public const string coinWin_SFX = "";
 
     }
 
     Sprite defaultElementSprite = null;
 
-    Sprite cashElementSprite = null;
+    Sprite[] cashElementSprites;
 
     Sprite crossElementSprite = null;
 
@@ -27,6 +33,9 @@ public class AssetLoader : MonoBehaviour {
 
     Sprite bellElementSprite = null;
 
+    AudioClip cellDrop_SFX = null;
+
+    AudioClip coinWin_SFX = null;
     //TO-DO: proper singleton
     private static AssetLoader inst;
 
@@ -34,13 +43,22 @@ public class AssetLoader : MonoBehaviour {
         inst = this;
         defaultElementSprite = (Sprite) Resources.Load(PathManager.boardElementDefaultIconPath, typeof(Sprite));
         //Debug.Log("Sprite: " + defaultElementSprite.name);
-        cashElementSprite = (Sprite) Resources.Load(PathManager.boardElementCashIconPath, typeof(Sprite));
+        cashElementSprites = new Sprite[PathManager.boardElementCashIconsPaths.Length];
+        for (int i = 0; i < cashElementSprites.Length; i++) {
+            cashElementSprites[i] = (Sprite) Resources.Load(PathManager.boardElementCashIconsPaths[i], typeof(Sprite));
+        }
+
         //Debug.Log("Sprite: " + cashElementSprite.name);
         crossElementSprite = (Sprite) Resources.Load(PathManager.boardElementCrossIconPath, typeof(Sprite));
 
         bombElementSprite = (Sprite) Resources.Load(PathManager.boardElementBombIconPath, typeof(Sprite));
 
         bellElementSprite = (Sprite) Resources.Load(PathManager.boardElementBellIconPath, typeof(Sprite));
+
+        // Audio clips
+        cellDrop_SFX = (AudioClip) Resources.Load(PathManager.cellDrop_SFX, typeof(AudioClip));
+
+        coinWin_SFX = (AudioClip) Resources.Load(PathManager.coinWin_SFX, typeof(AudioClip));
     }
     // Start is called before the first frame update
     void Start() {
@@ -54,8 +72,8 @@ public class AssetLoader : MonoBehaviour {
     public static Sprite GetDefaultElementSprite() {
         return inst.defaultElementSprite;
     }
-    public static Sprite GetCashElementSprite() {
-        return inst.cashElementSprite;
+    public static Sprite GetCashElementSprite(int index) {
+        return inst.cashElementSprites[index];
     }
     public static Sprite GetCrossElementSprite() {
         return inst.crossElementSprite;
@@ -67,4 +85,12 @@ public class AssetLoader : MonoBehaviour {
         return inst.bellElementSprite;
     }
 
+    // Audio clips
+    public static AudioClip GetCellDropSFX() {
+        return inst.cellDrop_SFX;
+    }
+
+    public static AudioClip GetCoinWinSFX() {
+        return inst.coinWin_SFX;
+    }
 }

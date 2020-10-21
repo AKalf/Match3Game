@@ -23,7 +23,7 @@ public class InputManager : MonoBehaviour {
             instance = this;
         }
 
-        OnDragEvent.hasDragBegin = false;
+        //OnDragEvent.hasDragBegin = false;
         firstCell = null;
         secondCell = null;
 
@@ -33,16 +33,15 @@ public class InputManager : MonoBehaviour {
     }
 
     // Update is called once per frame
-    void Update() {
-
-    }
-
+    void Update() {}
     public void HandleInputForCell(GameObject cell) {
         //Debug.Log("Input cell: " + cell.gameObject.name);
-        if (!BoardManager.GetInstance().IsAvailable() || cell == null) {
+        if (!BoardManager.GetInstance().IsAvailable() || cell == null || cell == firstCell) {
             return;
         }
         else if (cell.tag != "Cell") {
+            firstCell = null;
+            secondCell = null;
             return;
         }
         if (firstCell == null) {

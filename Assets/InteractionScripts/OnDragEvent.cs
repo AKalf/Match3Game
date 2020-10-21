@@ -15,9 +15,9 @@ public class OnDragEvent : MonoBehaviour {
         //Create a new entry for the Event Trigger
         EventTrigger.Entry entryBegin = new EventTrigger.Entry();
         //Add a Drag type event to the Event Trigger
-        entryBegin.eventID = EventTriggerType.BeginDrag;
+        entryBegin.eventID = EventTriggerType.PointerDown;
         //call the OnDragDelegate function when the Event System detects dragging
-        entryBegin.callback.AddListener((data) => { OnDragDelegate((PointerEventData) data); });
+        entryBegin.callback.AddListener((data) => { Ray((PointerEventData) data); });
         //Add the trigger entry
         trigger.triggers.Add(entryBegin);
 
@@ -30,29 +30,22 @@ public class OnDragEvent : MonoBehaviour {
         trigger.triggers.Add(entryEnd);
     }
 
-    // Update is called once per frame
-    void Update() {
-
-    }
-
-    public void OnDragDelegate(PointerEventData data) {
-        if (!hasDragBegin) {
-            InputManager.GetInstance().HandleInputForCell(this.gameObject);
-            hasDragBegin = true;
-        }
-    }
     public void Ray(PointerEventData data) {
         PointerEventData pointerData = new PointerEventData(EventSystem.current);
-
+        Debug.Log("Ray called");
         pointerData.position = Input.mousePosition;
 
         List<RaycastResult> results = new List<RaycastResult>();
         EventSystem.current.RaycastAll(pointerData, results);
 
         if (results.Count > 0) {
-            if (results[0].gameObject.GetComponent<OnDragEvent>() != null) {
-                InputManager.GetInstance().HandleInputForCell(results[0].gameObject);
-                results.Clear();
+            foreach (RaycastResult r in results) {
+                if (r.gameObject.GetComponent<OnDragEvent>() != null) {
+                    Debug.Log("r: " + r.gameObject);
+                    InputManager.GetInstance().HandleInputForCell(r.gameObject);
+                    results.Clear();
+                    return;
+                }
             }
 
         }

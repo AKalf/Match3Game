@@ -60,13 +60,13 @@
      <Compile Include="Assets\AlexToolScripts\DebugMessage.cs" />
      <Compile Include="Assets\Animations.cs" />
      <Compile Include="Assets\AssetLoader.cs" />
+     <Compile Include="Assets\AudioManager.cs" />
      <Compile Include="Assets\BoardScripts\BoardElement.cs" />
      <Compile Include="Assets\BoardScripts\BoardFunctions.cs" />
      <Compile Include="Assets\BoardScripts\BoardManager.cs" />
      <Compile Include="Assets\BoardScripts\DetailsManager.cs" />
      <Compile Include="Assets\BoardScripts\MoneyManager.cs" />
      <Compile Include="Assets\FixedElementData.cs" />
-     <Compile Include="Assets\GameStates.cs" />
      <Compile Include="Assets\GraphBoardDepricated.cs" />
      <Compile Include="Assets\InteractionScripts\InputManager.cs" />
      <Compile Include="Assets\InteractionScripts\OnDragEvent.cs" />

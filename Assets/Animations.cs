@@ -4,8 +4,6 @@ using UnityEngine;
 
 public class Animations : MonoBehaviour {
 
-    private static float movingSpeed = 0.2f;
-
     public enum AnimationTypes { ScaleToZero, MoveTo, ScaleToOne, ChangeSprite }
 
     public static Dictionary<Transform, List<Animation>> animatedTransforms = new Dictionary<Transform, List<Animation>>();
@@ -21,8 +19,6 @@ public class Animations : MonoBehaviour {
     Transform gamePanel = null;
 
     public static Animations inst = null;
-
-    private static bool shouldPlayAnimations = false;
     /// <summary>
     /// Scale local scale of a transfrom to zero
     /// </summary>
@@ -60,13 +56,13 @@ public class Animations : MonoBehaviour {
     }
 
     private static void ScaleTo(Transform transfromToScale, float speed, Vector3 target) {
-        transfromToScale.localScale = Vector3.Lerp(transfromToScale.localScale, target, speed);
+        transfromToScale.localScale = Vector3.Lerp(transfromToScale.localScale, target, speed * Time.deltaTime);
 
     }
     /// <summary>
     /// Move a transfrom to a position
     /// </summary>
-    public static Animation MoveToPosition(Transform tranformToMove, float speed, Vector3 targetPosition) {
+    public static Animation AddAnimationMoveToPosition(Transform tranformToMove, float speed, Vector3 targetPosition) {
         if (animatedTransforms.ContainsKey(tranformToMove) == false) {
             animatedTransforms.Add(tranformToMove, new List<Animation>());
         }
@@ -77,7 +73,9 @@ public class Animations : MonoBehaviour {
     }
 
     private static void MoveTo(Transform trans, float speed, Vector3 target) {
-        trans.position = Vector3.Lerp(trans.position, target, speed);
+        //Debug.Log("Speed: " + speed + " final speed: " + speed * Time.deltaTime);
+        trans.GetComponent<RectTransform>().anchoredPosition = Vector3.Lerp(trans.GetComponent<RectTransform>().anchoredPosition, target, speed * Time.deltaTime);
+
     }
 
     private static void ChangeSprite(Transform boardElementGameObject, Sprite targetSprite, Color targetColor) {
@@ -90,20 +88,20 @@ public class Animations : MonoBehaviour {
         for (int i = 0; i < messages.Length; i++) {
             switch (messages[i].type) {
                 case AnimationTypes.MoveTo:
-                    MoveToPosition(inst.gamePanel.GetChild(messages[i].childIndex), movingSpeed, new Vector3(messages[i].targetX, messages[i].targetY, messages[i].targetZ));
+                    AddAnimationMoveToPosition(inst.gamePanel.GetChild(messages[i].childIndex), messages[i].speed, new Vector3(messages[i].targetX, messages[i].targetY, messages[i].targetZ));
                     break;
                 case AnimationTypes.ScaleToOne:
-                    AddAnimationScaleToOne(inst.gamePanel.GetChild(messages[i].childIndex), movingSpeed);
+                    AddAnimationScaleToOne(inst.gamePanel.GetChild(messages[i].childIndex), messages[i].speed);
                     break;
                 case AnimationTypes.ScaleToZero:
-                    AddAnimationScaleToZero(inst.gamePanel.GetChild(messages[i].childIndex), movingSpeed);
+                    AddAnimationScaleToZero(inst.gamePanel.GetChild(messages[i].childIndex), messages[i].speed);
                     break;
                 case AnimationTypes.ChangeSprite:
                     AddAnimationChangeSprite(inst.gamePanel.GetChild(messages[i].childIndex), messages[i].targetSprite, messages[i].targetColor);
                     break;
             }
         }
-        shouldPlayAnimations = true;
+
     }
 
     private void Awake() {
@@ -112,16 +110,17 @@ public class Animations : MonoBehaviour {
 
     private void Update() {
 
-        if (animatedTransforms.Keys.Count > 0 && shouldPlayAnimations) {
+        if (animatedTransforms.Keys.Count > 0) {
 
             foreach (Transform trans in animatedTransforms.Keys) {
+
                 currentAnimation = animatedTransforms[trans][0];
                 if (currentAnimation.hasFinished) {
                     //Debug.Log("----- Animation finished: " + currentAnimation.animationType + " for transform: " + currentAnimation.transform.name);
-                    AlexDebugger.GetInstance().AddMessage("Animation finished: " + currentAnimation.animationType + " for transfrom " + currentAnimation.transform.name, AlexDebugger.tags.Animations);
-                    if (currentAnimation.speed > 5000) {
-                        AlexDebugger.GetInstance().AddMessage("Transfrom " + currentAnimation.transform.name + " moved to holders position", AlexDebugger.tags.Animations);
-                    }
+                    //AlexDebugger.GetInstance().AddMessage("Animation finished: " + currentAnimation.animationType + " for transfrom " + currentAnimation.transform.name, AlexDebugger.tags.Animations);
+                    //if (currentAnimation.speed > 5000) {
+                    //AlexDebugger.GetInstance().AddMessage("Transfrom " + currentAnimation.transform.name + " moved to holders position", AlexDebugger.tags.Animations);
+                    //}
                     animatedTransforms[currentAnimation.transform].Remove(currentAnimation);
                     if (animatedTransforms[currentAnimation.transform].Count < 1) {
                         toRemove.Add(trans);
@@ -138,7 +137,6 @@ public class Animations : MonoBehaviour {
                     animatedTransforms.Remove(t);
                 }
                 if (animatedTransforms.Keys.Count < 1) {
-                    shouldPlayAnimations = false;
                     BoardManager.areAnimationsPlaying = false;
                 }
                 toRemove.Clear();
@@ -146,15 +144,7 @@ public class Animations : MonoBehaviour {
 
         }
     }
-    // private Animation CheckIfTransformIsAnimated(Animation animToPlay) {
-    //     foreach (Animation anim in animatedTransforms[animToPlay.transform]) {
-    //         if (anim.isPlaying && anim != animToPlay) {
-    //             return anim;
-    //         }
-    //     }
-    //     return animToPlay;
 
-    // }
     public void PlayAnimation(Animations.Animation animToPlay) {
         switch (animToPlay.animationType) {
             case AnimationTypes.ScaleToZero:
@@ -178,12 +168,14 @@ public class Animations : MonoBehaviour {
 
                 break;
             case AnimationTypes.MoveTo:
+                //Debug.Log("Anim to play speed: " + animToPlay.speed + " time " + Time.deltaTime);
                 MoveTo(animToPlay.transform, animToPlay.speed, animToPlay.target);
                 animToPlay.isPlaying = true;
-                if (Vector3.Distance(animToPlay.transform.position, animToPlay.target) < 0.05f) {
+                animToPlay.lastTimePlay = Time.time;
+                if (Vector3.Distance(animToPlay.transform.GetComponent<RectTransform>().anchoredPosition, animToPlay.target) < 2.0f) {
                     animToPlay.isPlaying = false;
                     animToPlay.hasFinished = true;
-                    animToPlay.transform.position = animToPlay.target;
+                    animToPlay.transform.GetComponent<RectTransform>().anchoredPosition = animToPlay.target;
                 }
                 break;
             case AnimationTypes.ChangeSprite:
@@ -194,40 +186,6 @@ public class Animations : MonoBehaviour {
                 break;
         }
     }
-    // Moved to each gameobjerct's Update
-    // private void PlayAnimation(Animation animToPlay) {
-    //     switch (animToPlay.animationType) {
-    //         case AnimationTypes.ScaleToZero:
-    //             ScaleTo(animToPlay.transform, animToPlay.speed, animToPlay.target);
-    //             animToPlay.isPlaying = true;
-    //             if (Vector3.Distance(animToPlay.transform.localScale, animToPlay.target) < 0.05f) {
-    //                 animToPlay.transform.localScale = animToPlay.target;
-    //                 animToPlay.isPlaying = false;
-    //                 animToPlay.hasFinished = true;
-    //             }
-
-    //             break;
-    //         case AnimationTypes.ScaleToOne:
-    //             ScaleTo(animToPlay.transform, animToPlay.speed, animToPlay.target);
-    //             animToPlay.isPlaying = true;
-    //             if (Vector3.Distance(animToPlay.transform.localScale, animToPlay.target) < 0.05f) {
-    //                 animToPlay.transform.localScale = animToPlay.target;
-    //                 animToPlay.isPlaying = false;
-    //                 animToPlay.hasFinished = true;
-    //             }
-
-    //             break;
-    //         case AnimationTypes.MoveTo:
-    //             MoveTo(animToPlay.transform, animToPlay.speed, animToPlay.target);
-    //             animToPlay.isPlaying = true;
-    //             if (Vector3.Distance(animToPlay.transform.position, animToPlay.target) < 0.05f) {
-    //                 animToPlay.isPlaying = false;
-    //                 animToPlay.hasFinished = true;
-    //                 animToPlay.transform.position = animToPlay.target;
-    //             }
-    //             break;
-    //     }
-    // }
 
     public interface IAnimationFunctions {
         void PlayAnimation();
@@ -239,7 +197,7 @@ public class Animations : MonoBehaviour {
         public Vector3 target = Vector3.zero;
         public bool isPlaying = false;
         public bool hasFinished = false;
-        public double lastTimePlay = 0.0f;
+        public float lastTimePlay = 0.0f;
 
         public Sprite targetSprite = null;
         public Color targetColor = Color.black;

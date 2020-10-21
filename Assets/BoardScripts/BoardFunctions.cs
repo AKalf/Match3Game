@@ -8,7 +8,7 @@ public static class BoardFunctions {
     public static Color[] availColors = { Color.red, Color.blue, Color.green, Color.cyan, Color.magenta };
 
     /// <summary>Returns the position of the element on the board</summary>
-    public static KeyValuePair<int, int> GetPositionOfElement(BoardElement element, BoardElement[, ] positions) {
+    public static KeyValuePair<int, int> GetBoardPositionOfElement(BoardElement element, BoardElement[, ] positions) {
         for (int row = 0; row < positions.GetLength(1); row++) {
             for (int collumn = 0; collumn < positions.GetLength(0); collumn++) {
                 if (positions[collumn, row] == element) {
@@ -23,8 +23,8 @@ public static class BoardFunctions {
     /// <summary>Swaps to elements positions on the board </summary>
     public static void SwapBoardElementNeighbours(BoardElement oldElement, BoardElement newElement, ref BoardElement[, ] positions) {
 
-        KeyValuePair<int, int> oldElementPosition = BoardFunctions.GetPositionOfElement(oldElement, positions);
-        KeyValuePair<int, int> newElementPosition = BoardFunctions.GetPositionOfElement(newElement, positions);
+        KeyValuePair<int, int> oldElementPosition = BoardFunctions.GetBoardPositionOfElement(oldElement, positions);
+        KeyValuePair<int, int> newElementPosition = BoardFunctions.GetBoardPositionOfElement(newElement, positions);
 
         positions[oldElementPosition.Key, oldElementPosition.Value] = newElement;
         positions[newElementPosition.Key, newElementPosition.Value] = oldElement;
@@ -47,26 +47,26 @@ public static class BoardFunctions {
     /// <param name="shouldCheckMatches">should check for new matches after swap?</param>
     /// <param name="swappingSpeed">the speed of animation</param>
     /// <returns>Returns if should check</returns>
-    public static void SwapElements(BoardElement firstElement, BoardElement secondElement, ref BoardElement[, ] positions, ref List<AnimationMessage> playingAnimations, bool rewire = false, float swappingSpeed = 0.2f) {
+    public static void SwapElements(BoardElement firstElement, BoardElement secondElement, BoardManager boardInstance, bool rewire = false) {
+        KeyValuePair<int, int> firstElementPosOnBoard = GetBoardPositionOfElement(firstElement, boardInstance.elementsPositions);
+        KeyValuePair<int, int> secondElementPosOnBoard = GetBoardPositionOfElement(secondElement, boardInstance.elementsPositions);
 
-        Vector3 targetPos = secondElement.GetAttachedGameObject().transform.position;
-        playingAnimations.Add(new AnimationMessage(Animations.AnimationTypes.MoveTo, firstElement.GetChildIndex(), swappingSpeed, targetPos.x, targetPos.y, targetPos.z));
+        Vector3 targetPos = boardInstance.positionsOnWorld[secondElementPosOnBoard.Key, secondElementPosOnBoard.Value];
+        boardInstance.playingAnimations.Add(new AnimationMessage(Animations.AnimationTypes.MoveTo, firstElement.GetChildIndex(), boardInstance.GetSwappingSpeed(), targetPos.x, targetPos.y, targetPos.z));
 
-        targetPos = firstElement.GetAttachedGameObject().transform.position;
-        playingAnimations.Add(new AnimationMessage(Animations.AnimationTypes.MoveTo, secondElement.GetChildIndex(), swappingSpeed, targetPos.x, targetPos.y, targetPos.z));
+        targetPos = boardInstance.positionsOnWorld[firstElementPosOnBoard.Key, firstElementPosOnBoard.Value];
+        boardInstance.playingAnimations.Add(new AnimationMessage(Animations.AnimationTypes.MoveTo, secondElement.GetChildIndex(), boardInstance.GetSwappingSpeed(), targetPos.x, targetPos.y, targetPos.z));
 
         if (!rewire) {
-            BoardFunctions.SwapBoardElementNeighbours(firstElement, secondElement, ref positions);
+            BoardFunctions.SwapBoardElementNeighbours(firstElement, secondElement, ref boardInstance.elementsPositions);
         }
         else {
-            targetPos = firstElement.GetAttachedGameObject().transform.position;
-            playingAnimations.Add(new AnimationMessage(Animations.AnimationTypes.MoveTo, firstElement.GetChildIndex(), swappingSpeed, targetPos.x, targetPos.y, targetPos.z));
-            targetPos = secondElement.GetAttachedGameObject().transform.position;
-            playingAnimations.Add(new AnimationMessage(Animations.AnimationTypes.MoveTo, secondElement.GetChildIndex(), swappingSpeed, targetPos.x, targetPos.y, targetPos.z));
+            targetPos = boardInstance.positionsOnWorld[firstElementPosOnBoard.Key, firstElementPosOnBoard.Value];
+            boardInstance.playingAnimations.Add(new AnimationMessage(Animations.AnimationTypes.MoveTo, firstElement.GetChildIndex(), boardInstance.GetSwappingSpeed(), targetPos.x, targetPos.y, targetPos.z));
+            targetPos = boardInstance.positionsOnWorld[secondElementPosOnBoard.Key, secondElementPosOnBoard.Value];
+            boardInstance.playingAnimations.Add(new AnimationMessage(Animations.AnimationTypes.MoveTo, secondElement.GetChildIndex(), boardInstance.GetSwappingSpeed(), targetPos.x, targetPos.y, targetPos.z));
         }
-        // if (playingAnimations.Count > 0) {
-        //     BoardManager.GetInstance().SendAnimationMessagesToClient(ref playingAnimations);
-        // }
+
     }
 
     /// <summary> Returns the number of elements matched towards top </summary>
@@ -100,7 +100,6 @@ public static class BoardFunctions {
         return numberOfElem;
 
     }
-
     /// <summary> Returns the number of elements matched towards left </summary>
     public static int CheckLeftNeighboursForMatches(int collum, int row, BoardElement[, ] positions) {
         int numberOfElem = 0;
@@ -115,7 +114,6 @@ public static class BoardFunctions {
         }
         return numberOfElem;
     }
-
     /// <summary> Returns the number of elements matched towards right </summary>
     public static int CheckRightNeighboursForMatches(int collum, int row, BoardElement[, ] positions, int collumsNumber) {
         int numberOfElem = 0;
@@ -185,41 +183,53 @@ public static class BoardFunctions {
     }
 
     /// <summary> Used recursivly to move non-destroyed elements dowards</summary>
-    public static void MoveMatchedElementUpwards(
-        int collumn, int row,
-        ref BoardElement[, ] positions, ref bool[, ] matchedElemPositions, ref bool[, ] positionsDestroyed,
-        ref List<AnimationMessage> playingAnimations, float swappingSpeed) {
-        AlexDebugger.GetInstance().AddMessage("Moving upwards " + positions[collumn, row].GetAttachedGameObject().name + " from position: " + collumn + ", " + row, AlexDebugger.tags.UpwardMovement);
+    public static void MoveMatchedElementUpwards(int collumn, int row, BoardManager boardInstance) {
+        //AlexDebugger.GetInstance().AddMessage("Moving upwards " + boardInstance.elementsPositions[collumn, row].GetAttachedGameObject().name + " from position: " + collumn + ", " + row, AlexDebugger.tags.UpwardMovement);
         // swap with next non matched element on the collum if not on top of collum
-        if (row != 0) {
-            for (int i = row - 1; i > -1; i--) {
-                // if non-matched element found above, swap
-                if (matchedElemPositions[collumn, i] == false) {
-                    AlexDebugger.GetInstance().AddMessage("Swapping " + positions[collumn, row].GetAttachedGameObject().name + " with " + positions[collumn, i].GetAttachedGameObject().name + " at position " + collumn + ", " + i, AlexDebugger.tags.UpwardMovement);
-                    BoardFunctions.SwapElements(positions[collumn, row], positions[collumn, i], ref positions, ref playingAnimations, false, swappingSpeed);
+        int newRow = row;
+        if (row == 0) {
+            // if element reached top or there are no non-matched elements above, mark this element as destroyed and non-matched
+            boardInstance.positionsDestroyed[collumn, newRow] = true;
+            boardInstance.matchedElemPositions[collumn, newRow] = false;
+            return;
+        }
+        Queue<int> matchedElementsInRow = new Queue<int>();
+        if (boardInstance.matchedElemPositions[collumn, row]) {
+            matchedElementsInRow.Enqueue(row);
+        }
+        for (int i = row - 1; i > -1; i--) {
+            // if non-matched element found above, swap
+            if (boardInstance.matchedElemPositions[collumn, i] == false && boardInstance.positionsDestroyed[collumn, i] == false && matchedElementsInRow.Count > 0) {
+                //AlexDebugger.GetInstance().AddMessage("Swapping " + boardInstance.elementsPositions[collumn, row].GetAttachedGameObject().name + " with " + boardInstance.elementsPositions[collumn, i].GetAttachedGameObject().name + " at position " + collumn + ", " + i, AlexDebugger.tags.UpwardMovement);
 
-                    // make changes to the flag array
-                    matchedElemPositions[collumn, row] = false;
-                    matchedElemPositions[collumn, i] = true;
-                    return;
-                }
+                int nextEmptyPosition = matchedElementsInRow.Dequeue();
+                BoardFunctions.SwapElements(boardInstance.elementsPositions[collumn, nextEmptyPosition], boardInstance.elementsPositions[collumn, i], boardInstance);
+                boardInstance.matchedElemPositions[collumn, nextEmptyPosition] = false;
+                boardInstance.matchedElemPositions[collumn, i] = true;
+                matchedElementsInRow.Enqueue(i);
+
+            }
+            else if (boardInstance.matchedElemPositions[collumn, i] == true) {
+                matchedElementsInRow.Enqueue(i);
             }
         }
+        while (matchedElementsInRow.Count > 0) {
+            int index = matchedElementsInRow.Dequeue();
+            boardInstance.positionsDestroyed[collumn, index] = true;
+            boardInstance.matchedElemPositions[collumn, index] = false;
 
-        // if element reached top or there are no non-matched elements above, mark this element as destroyed and non-matched
-        positionsDestroyed[collumn, row] = true;
-        matchedElemPositions[collumn, row] = false;
+        }
 
     }
 
     /// <summary>Re-creates destroyed elements, by moving them to holders position and then making a drop effect</summary>
     /// <returns>The best score that can be reached if swapped with neighbour</returns>
-    public static void ReplaceElementAnimations(int collum, int row, ref BoardElement[, ] positions, ref bool[, ] matchedElemPositions, Transform[] holders, ref List<AnimationMessage> playingAnimations, float swappingSpeed) {
+    public static void ReplaceElementAnimations(int collum, int row, BoardManager board) {
 
-        CheckIfElementAtPositionIsNull(collum, row, positions);
+        //CheckIfElementAtPositionIsNull(collum, row, board.elementsPositions);
 
-        AlexDebugger.GetInstance().AddMessage("Replacing " + positions[collum, row], AlexDebugger.tags.Effects);
-        Vector3 originalPos = positions[collum, row].GetAttachedGameObject().transform.position;
+        //AlexDebugger.GetInstance().AddMessage("Replacing " + board.elementsPositions[collum, row], AlexDebugger.tags.Effects);
+        Vector3 originalPos = board.positionsOnWorld[collum, row];
 
 #region Score check
         // the minimum maxOutput user's input can reach
@@ -257,7 +267,7 @@ public static class BoardFunctions {
         // }
 #endregion
 
-        playingAnimations.Add(new AnimationMessage(positions[collum, row].GetChildIndex(), positions[collum, row].GetElementSprite(), positions[collum, row].GetElementValue()));
+        board.playingAnimations.Add(new AnimationMessage(board.elementsPositions[collum, row].GetChildIndex(), board.elementsPositions[collum, row].GetElementSprite(), board.elementsPositions[collum, row].GetElementValue()));
 #region Score check
         // if (maxScorePossible >= 1) {
         //     AlexDebugger.GetInstance().AddMessage("Element: " + positions[collum, row] + " was created wihh a potential output of " + maxScorePossible, AlexDebugger.tags.Step4);
@@ -272,9 +282,9 @@ public static class BoardFunctions {
         // }
         // }
 #endregion
-        playingAnimations.Add(new AnimationMessage(Animations.AnimationTypes.MoveTo, positions[collum, row].GetChildIndex(), 2000000, holders[collum].position.x, holders[collum].position.y, holders[collum].position.z));
-        playingAnimations.Add(new AnimationMessage(Animations.AnimationTypes.ScaleToOne, positions[collum, row].GetChildIndex(), 200));
-        playingAnimations.Add(new AnimationMessage(Animations.AnimationTypes.MoveTo, positions[collum, row].GetChildIndex(), swappingSpeed, originalPos.x, originalPos.y, originalPos.z));
+        board.playingAnimations.Add(new AnimationMessage(Animations.AnimationTypes.MoveTo, board.elementsPositions[collum, row].GetChildIndex(), 100000, board.holders[collum].anchoredPosition.x, board.holders[collum].anchoredPosition.y + 200, 0));
+        board.playingAnimations.Add(new AnimationMessage(Animations.AnimationTypes.ScaleToOne, board.elementsPositions[collum, row].GetChildIndex(), 100000));
+        board.playingAnimations.Add(new AnimationMessage(Animations.AnimationTypes.MoveTo, board.elementsPositions[collum, row].GetChildIndex(), board.GetSwappingSpeed() * 2, originalPos.x, originalPos.y, originalPos.z));
 
         return;
 
@@ -372,8 +382,8 @@ public static class BoardFunctions {
 
     /// <summary> Returns if two elements are neighbours</summary>
     public static bool GetIfNeighbours(BoardElement elem1, BoardElement elem2, BoardElement[, ] positions) {
-        KeyValuePair<int, int> elem1Pos = BoardFunctions.GetPositionOfElement(elem1, positions);
-        KeyValuePair<int, int> elem2Pos = BoardFunctions.GetPositionOfElement(elem2, positions);
+        KeyValuePair<int, int> elem1Pos = BoardFunctions.GetBoardPositionOfElement(elem1, positions);
+        KeyValuePair<int, int> elem2Pos = BoardFunctions.GetBoardPositionOfElement(elem2, positions);
         // Case same collumn, one row         above                                 or below
         if (elem1Pos.Key == elem2Pos.Key && (elem2Pos.Value == elem1Pos.Value - 1 || elem2Pos.Value == elem1Pos.Value + 1)) {
             return true;
@@ -469,32 +479,34 @@ public static class BoardFunctions {
         return null;
     }
 
-    public static BoardElement CreateNewElement(BoardElement previousElement, System.Type boardElementType) {
+    public static BoardElement CreateNewElement(BoardElement previousElement, BoardElement.BoardElementTypes type) {
+        Color newColor = BoardFunctions.availColors[Random.Range(0, BoardFunctions.availColors.Length)];
+        switch (type) {
+            case BoardElement.BoardElementTypes.Cross:
+                previousElement = new CrossBoardElement(previousElement.GetAttachedGameObject(), previousElement.GetChildIndex(), previousElement.GetElementValue());
+                break;
+            case BoardElement.BoardElementTypes.Bomb:
+                previousElement = new BombBoardElement(previousElement.GetAttachedGameObject(), previousElement.GetChildIndex());
+                break;
+            case BoardElement.BoardElementTypes.Bell:
+                previousElement = new BellBoardElement(previousElement.GetAttachedGameObject(), previousElement.GetChildIndex());
+                break;
+            case BoardElement.BoardElementTypes.Default:
+                if (previousElement.GetElementClassType() != typeof(BoardElement)) {
+                    previousElement = new BoardElement(previousElement.GetAttachedGameObject(), previousElement.GetChildIndex(), newColor);
+                }
+                else {
+                    previousElement.OnElementAppearance(newColor);
+                }
+                break;
+        }
 
-        if (boardElementType == typeof(CashBoardElement)) {
-            previousElement = new CashBoardElement(previousElement.GetAttachedGameObject(), previousElement.GetChildIndex(), FixedElementData.cashElementValue);
-        }
-        else if (boardElementType == typeof(CrossBoardElement)) {
-            Color newColor = BoardFunctions.availColors[Random.Range(0, BoardFunctions.availColors.Length)];
-            previousElement = new CrossBoardElement(previousElement.GetAttachedGameObject(), previousElement.GetChildIndex(), previousElement.GetElementValue());
-        }
-        else if (boardElementType == typeof(BombBoardElement)) {
-            previousElement = new BombBoardElement(previousElement.GetAttachedGameObject(), previousElement.GetChildIndex());
-        }
-        else if (boardElementType == typeof(BellBoardElement)) {
-            previousElement = new BellBoardElement(previousElement.GetAttachedGameObject(), previousElement.GetChildIndex());
-        }
-        else {
-            if (previousElement.GetElementClassType() != typeof(BoardElement)) {
-                Color newColor = BoardFunctions.availColors[Random.Range(0, BoardFunctions.availColors.Length)];
-                previousElement = new BoardElement(previousElement.GetAttachedGameObject(), previousElement.GetChildIndex(), newColor);
-            }
-            else {
-                Color newColor = BoardFunctions.availColors[Random.Range(0, BoardFunctions.availColors.Length)];
-                previousElement.OnElementAppearance(newColor);
-            }
-        }
         return previousElement;
+    }
+    public static BoardElement CreateNewCashElement(BoardElement previousElement, int cashTypeIndex) {
+        previousElement = new CashBoardElement(previousElement.GetAttachedGameObject(), previousElement.GetChildIndex(), cashTypeIndex);
+        return previousElement;
+
     }
 
     public static bool DestroyBoardElement(int collum, int row, ref BoardElement[, ] positions, ref bool[, ] matchedElemPositions, ref List<AnimationMessage> playingAnimations, BoardElement lastElementProccesed) {
@@ -629,18 +641,18 @@ public static class BoardFunctions {
         }
     }
 
-    public static bool GetChances(float chances) {
-        if (chances >= Random.Range(0, 100)) {
-            return true;
+    public static int GetIfCashElement() {
+        int roll = Random.Range(0, 100);
+        for (int i = FixedElementData.cashElementsChances.Length - 1; i > -1; i--) {
+            if (roll <= FixedElementData.cashElementsChances[i]) {
+                return i;
+            }
         }
-        else {
-            return false;
-        }
+        return -1;
     }
 
     public static bool GetIfMatchCreatesBell(int collum, int row, BoardElement[, ] positions, ref bool[, ] searchedElements) {
         if (!searchedElements[collum, row]) {
-
             int numberOfRightMatches = CheckRightNeighboursForMatches(collum, row, positions, searchedElements.GetLength(0));
             if (numberOfRightMatches >= 4) {
                 for (int i = collum; i < collum + 4; i++) {
@@ -669,31 +681,36 @@ public static class BoardFunctions {
 
     public static bool GetIfMatchCreatesBomb(int collum, int row, BoardElement[, ] positions, ref bool[, ] searchedElements) {
         if (!searchedElements[collum, row]) {
+
             int numberOfRightMatches = CheckRightNeighboursForMatches(collum, row, positions, searchedElements.GetLength(0));
-            int numberOfLeftMatches = CheckLeftNeighboursForMatches(collum, row, positions);
-            int numberOfBottomMatches = CheckBottomNeighboursForMatches(collum, row, positions, searchedElements.GetLength(1));
-            int numberOfTopMatches = CheckUpperNeighboursForMatches(collum, row, positions);
-            Debug.Log("Checking for bomb");
-            Debug.Log("left: " + numberOfLeftMatches);
-            Debug.Log("right: " + numberOfRightMatches);
-            Debug.Log("bottom: " + numberOfBottomMatches);
-            if (numberOfRightMatches >= 1 && numberOfLeftMatches >= 1 && numberOfBottomMatches >= 1) {
-                Debug.LogError(positions[collum, row].GetAttachedGameObject().name + " created a bomb match");
-                searchedElements[collum + 1, row] = true;
-                searchedElements[collum - 1, row] = true;
-                searchedElements[collum, row + 1] = true;
-                searchedElements[collum, row + 2] = true;
-                searchedElements[collum, row] = true;
-                return true;
+            int numberOfBottomMatches = 0;
+
+            if (numberOfRightMatches >= 2) {
+                numberOfBottomMatches = CheckBottomNeighboursForMatches(collum + 1, row, positions, searchedElements.GetLength(1));
+                if (numberOfBottomMatches >= 2) {
+                    searchedElements[collum + 1, row] = true;
+                    searchedElements[collum + 2, row] = true;
+                    searchedElements[collum, row + 1] = true;
+                    searchedElements[collum, row + 2] = true;
+                    searchedElements[collum, row] = true;
+                    return true;
+                }
 
             }
-            else if (numberOfRightMatches >= 2 && numberOfTopMatches >= 2) {
-                searchedElements[collum + 1, row] = true;
-                searchedElements[collum + 2, row] = true;
-                searchedElements[collum, row + 1] = true;
-                searchedElements[collum, row + 2] = true;
-                searchedElements[collum, row] = true;
-                return true;
+            numberOfBottomMatches = 0;
+            numberOfRightMatches = 0;
+            numberOfBottomMatches = CheckBottomNeighboursForMatches(collum, row, positions, searchedElements.GetLength(1));
+
+            if (numberOfBottomMatches >= 2) {
+                numberOfRightMatches = CheckRightNeighboursForMatches(collum, row + 2, positions, searchedElements.GetLength(0));
+                if (numberOfRightMatches >= 2) {
+                    searchedElements[collum + 1, row + 2] = true;
+                    searchedElements[collum + 2, row + 2] = true;
+                    searchedElements[collum, row + 1] = true;
+                    searchedElements[collum, row + 2] = true;
+                    searchedElements[collum, row] = true;
+                    return true;
+                }
             }
         }
         return false;
