@@ -17,9 +17,9 @@ public class AssetLoader : MonoBehaviour {
         public const string boardElementBellIconPath = "SpriteResources/BellIcon";
 
         // Sound Effects
-        public const string cellDrop_SFX = "";
+        public const string cellDrop_SFX = "AudioResources/Swap_Sound";
 
-        public const string coinWin_SFX = "";
+        public const string coinWin_SFX = "AudioResources/Coin_Sound";
 
     }
 

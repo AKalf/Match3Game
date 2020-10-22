@@ -60,7 +60,8 @@
      <Compile Include="Assets\AlexToolScripts\DebugMessage.cs" />
      <Compile Include="Assets\Animations.cs" />
      <Compile Include="Assets\AssetLoader.cs" />
-     <Compile Include="Assets\AudioManager.cs" />
+     <Compile Include="Assets\AudioScripts\AudioManager.cs" />
+     <Compile Include="Assets\AudioScripts\AudioMessage.cs" />
      <Compile Include="Assets\BoardScripts\BoardElement.cs" />
      <Compile Include="Assets\BoardScripts\BoardFunctions.cs" />
      <Compile Include="Assets\BoardScripts\BoardManager.cs" />

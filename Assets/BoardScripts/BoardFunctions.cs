@@ -47,24 +47,27 @@ public static class BoardFunctions {
     /// <param name="shouldCheckMatches">should check for new matches after swap?</param>
     /// <param name="swappingSpeed">the speed of animation</param>
     /// <returns>Returns if should check</returns>
-    public static void SwapElements(BoardElement firstElement, BoardElement secondElement, BoardManager boardInstance, bool rewire = false) {
+    public static void SwapElements(BoardElement firstElement, BoardElement secondElement, BoardManager boardInstance, bool rewire = false, float speed = -1) {
+        if (speed == -1) {
+            speed = boardInstance.GetSwappingSpeed();
+        }
         KeyValuePair<int, int> firstElementPosOnBoard = GetBoardPositionOfElement(firstElement, boardInstance.elementsPositions);
         KeyValuePair<int, int> secondElementPosOnBoard = GetBoardPositionOfElement(secondElement, boardInstance.elementsPositions);
 
         Vector3 targetPos = boardInstance.positionsOnWorld[secondElementPosOnBoard.Key, secondElementPosOnBoard.Value];
-        boardInstance.playingAnimations.Add(new AnimationMessage(Animations.AnimationTypes.MoveTo, firstElement.GetChildIndex(), boardInstance.GetSwappingSpeed(), targetPos.x, targetPos.y, targetPos.z));
+        boardInstance.animationMessages.Add(new AnimationMessage(Animations.AnimationTypes.MoveTo, firstElement.GetChildIndex(), speed, targetPos.x, targetPos.y, targetPos.z));
 
         targetPos = boardInstance.positionsOnWorld[firstElementPosOnBoard.Key, firstElementPosOnBoard.Value];
-        boardInstance.playingAnimations.Add(new AnimationMessage(Animations.AnimationTypes.MoveTo, secondElement.GetChildIndex(), boardInstance.GetSwappingSpeed(), targetPos.x, targetPos.y, targetPos.z));
+        boardInstance.animationMessages.Add(new AnimationMessage(Animations.AnimationTypes.MoveTo, secondElement.GetChildIndex(), speed, targetPos.x, targetPos.y, targetPos.z));
 
         if (!rewire) {
             BoardFunctions.SwapBoardElementNeighbours(firstElement, secondElement, ref boardInstance.elementsPositions);
         }
         else {
             targetPos = boardInstance.positionsOnWorld[firstElementPosOnBoard.Key, firstElementPosOnBoard.Value];
-            boardInstance.playingAnimations.Add(new AnimationMessage(Animations.AnimationTypes.MoveTo, firstElement.GetChildIndex(), boardInstance.GetSwappingSpeed(), targetPos.x, targetPos.y, targetPos.z));
+            boardInstance.animationMessages.Add(new AnimationMessage(Animations.AnimationTypes.MoveTo, firstElement.GetChildIndex(), speed, targetPos.x, targetPos.y, targetPos.z));
             targetPos = boardInstance.positionsOnWorld[secondElementPosOnBoard.Key, secondElementPosOnBoard.Value];
-            boardInstance.playingAnimations.Add(new AnimationMessage(Animations.AnimationTypes.MoveTo, secondElement.GetChildIndex(), boardInstance.GetSwappingSpeed(), targetPos.x, targetPos.y, targetPos.z));
+            boardInstance.animationMessages.Add(new AnimationMessage(Animations.AnimationTypes.MoveTo, secondElement.GetChildIndex(), speed, targetPos.x, targetPos.y, targetPos.z));
         }
 
     }
@@ -183,48 +186,71 @@ public static class BoardFunctions {
     }
 
     /// <summary> Used recursivly to move non-destroyed elements dowards</summary>
-    public static void MoveMatchedElementUpwards(int collumn, int row, BoardManager boardInstance) {
+    public static bool MoveMatchedElementUpwards(int collum, int row, BoardManager board) {
+        bool didSwapOccur = false;
         //AlexDebugger.GetInstance().AddMessage("Moving upwards " + boardInstance.elementsPositions[collumn, row].GetAttachedGameObject().name + " from position: " + collumn + ", " + row, AlexDebugger.tags.UpwardMovement);
         // swap with next non matched element on the collum if not on top of collum
         int newRow = row;
         if (row == 0) {
             // if element reached top or there are no non-matched elements above, mark this element as destroyed and non-matched
-            boardInstance.positionsDestroyed[collumn, newRow] = true;
-            boardInstance.matchedElemPositions[collumn, newRow] = false;
-            return;
+            //board.positionsDestroyed[collum, newRow] = true;
+            board.matchedElemPositions[collum, newRow] = false;
+            return false;
         }
-        Queue<int> matchedElementsInRow = new Queue<int>();
-        if (boardInstance.matchedElemPositions[collumn, row]) {
-            matchedElementsInRow.Enqueue(row);
+        Queue<int> destroyedElementsInRow = new Queue<int>();
+        if (board.matchedElemPositions[collum, row]) {
+            destroyedElementsInRow.Enqueue(row);
         }
         for (int i = row - 1; i > -1; i--) {
             // if non-matched element found above, swap
-            if (boardInstance.matchedElemPositions[collumn, i] == false && boardInstance.positionsDestroyed[collumn, i] == false && matchedElementsInRow.Count > 0) {
+            if (board.matchedElemPositions[collum, i] == false && board.positionsDestroyed[collum, i] == false && destroyedElementsInRow.Count > 0) {
                 //AlexDebugger.GetInstance().AddMessage("Swapping " + boardInstance.elementsPositions[collumn, row].GetAttachedGameObject().name + " with " + boardInstance.elementsPositions[collumn, i].GetAttachedGameObject().name + " at position " + collumn + ", " + i, AlexDebugger.tags.UpwardMovement);
 
-                int nextEmptyPosition = matchedElementsInRow.Dequeue();
-                BoardFunctions.SwapElements(boardInstance.elementsPositions[collumn, nextEmptyPosition], boardInstance.elementsPositions[collumn, i], boardInstance);
-                boardInstance.matchedElemPositions[collumn, nextEmptyPosition] = false;
-                boardInstance.matchedElemPositions[collumn, i] = true;
-                matchedElementsInRow.Enqueue(i);
+                int nextEmptyPosition = destroyedElementsInRow.Dequeue();
+                BoardFunctions.SwapElements(board.elementsPositions[collum, nextEmptyPosition], board.elementsPositions[collum, i], board, false, board.GetSwappingSpeed() * 2.5f);
+                board.matchedElemPositions[collum, nextEmptyPosition] = false;
+                board.matchedElemPositions[collum, i] = true;
+                destroyedElementsInRow.Enqueue(i);
+                didSwapOccur = true;
 
             }
-            else if (boardInstance.matchedElemPositions[collumn, i] == true) {
-                matchedElementsInRow.Enqueue(i);
+            else if (board.matchedElemPositions[collum, i] == true) {
+                destroyedElementsInRow.Enqueue(i);
             }
         }
-        while (matchedElementsInRow.Count > 0) {
-            int index = matchedElementsInRow.Dequeue();
-            boardInstance.positionsDestroyed[collumn, index] = true;
-            boardInstance.matchedElemPositions[collumn, index] = false;
 
+        while (destroyedElementsInRow.Count > 0) {
+            int index = destroyedElementsInRow.Dequeue();
+            board.matchedElemPositions[collum, index] = false;
+            board.positionsDestroyed[collum, index] = true;
         }
+        return didSwapOccur;
 
     }
 
+    private static BoardElement GetNewElementForPosition(int collum, int row, BoardManager board, ref bool[, ] searchedElements) {
+        if (BoardFunctions.GetIfMatchCreatesBell(collum, row, board.elementsPositions, ref searchedElements)) {
+            return BoardFunctions.CreateNewElement(board.elementsPositions[collum, row], BoardElement.BoardElementTypes.Bell);
+        }
+        else if (BoardFunctions.GetIfMatchCreatesBomb(collum, row, board.elementsPositions, ref searchedElements)) {
+            return BoardFunctions.CreateNewElement(board.elementsPositions[collum, row], BoardElement.BoardElementTypes.Bomb);
+        }
+        else if (BoardFunctions.GetIfMatchCreatesCross(collum, row, board.elementsPositions, ref searchedElements)) {
+            return BoardFunctions.CreateNewElement(board.elementsPositions[collum, row], BoardElement.BoardElementTypes.Cross);
+        }
+        else {
+            int cashElementIndex = BoardFunctions.GetIfCashElement();
+            if (cashElementIndex > -1) {
+                return BoardFunctions.CreateNewCashElement(board.elementsPositions[collum, row], cashElementIndex);
+            }
+            else {
+                return BoardFunctions.CreateNewElement(board.elementsPositions[collum, row], BoardElement.BoardElementTypes.Default);
+            }
+        }
+    }
     /// <summary>Re-creates destroyed elements, by moving them to holders position and then making a drop effect</summary>
     /// <returns>The best score that can be reached if swapped with neighbour</returns>
-    public static void ReplaceElementAnimations(int collum, int row, BoardManager board) {
+    public static void ReplaceElementAnimations(int collum, int row, BoardManager board, ref bool[, ] searchedElements) {
 
         //CheckIfElementAtPositionIsNull(collum, row, board.elementsPositions);
 
@@ -232,6 +258,7 @@ public static class BoardFunctions {
         Vector3 originalPos = board.positionsOnWorld[collum, row];
 
 #region Score check
+
         // the minimum maxOutput user's input can reach
         // int maxOutput = -1;
 
@@ -267,7 +294,6 @@ public static class BoardFunctions {
         // }
 #endregion
 
-        board.playingAnimations.Add(new AnimationMessage(board.elementsPositions[collum, row].GetChildIndex(), board.elementsPositions[collum, row].GetElementSprite(), board.elementsPositions[collum, row].GetElementValue()));
 #region Score check
         // if (maxScorePossible >= 1) {
         //     AlexDebugger.GetInstance().AddMessage("Element: " + positions[collum, row] + " was created wihh a potential output of " + maxScorePossible, AlexDebugger.tags.Step4);
@@ -282,9 +308,11 @@ public static class BoardFunctions {
         // }
         // }
 #endregion
-        board.playingAnimations.Add(new AnimationMessage(Animations.AnimationTypes.MoveTo, board.elementsPositions[collum, row].GetChildIndex(), 100000, board.holders[collum].anchoredPosition.x, board.holders[collum].anchoredPosition.y + 200, 0));
-        board.playingAnimations.Add(new AnimationMessage(Animations.AnimationTypes.ScaleToOne, board.elementsPositions[collum, row].GetChildIndex(), 100000));
-        board.playingAnimations.Add(new AnimationMessage(Animations.AnimationTypes.MoveTo, board.elementsPositions[collum, row].GetChildIndex(), board.GetSwappingSpeed() * 2, originalPos.x, originalPos.y, originalPos.z));
+        board.elementsPositions[collum, row] = GetNewElementForPosition(collum, row, board, ref searchedElements);
+        board.animationMessages.Add(new AnimationMessage(board.elementsPositions[collum, row].GetChildIndex(), board.elementsPositions[collum, row].GetElementSprite(), board.elementsPositions[collum, row].GetElementValue()));
+        board.animationMessages.Add(new AnimationMessage(Animations.AnimationTypes.MoveTo, board.elementsPositions[collum, row].GetChildIndex(), 100000, board.holders[collum].anchoredPosition.x, board.holders[collum].anchoredPosition.y + 200, 0));
+        board.animationMessages.Add(new AnimationMessage(Animations.AnimationTypes.ScaleToOne, board.elementsPositions[collum, row].GetChildIndex(), 100000));
+        board.animationMessages.Add(new AnimationMessage(Animations.AnimationTypes.MoveTo, board.elementsPositions[collum, row].GetChildIndex(), board.GetSwappingSpeed() * 2.5f, originalPos.x, originalPos.y, originalPos.z));
 
         return;
 
@@ -298,8 +326,7 @@ public static class BoardFunctions {
     }
 
     /// <summary>Checks each element on the board for matches and flags them</summary>
-    public static int
-    CheckBoardForMatches(BoardElement[, ] positions, ref bool[, ] matchedElemPositions, int collumsNumber, int rowsNumber) {
+    public static int CheckBoardForMatches(BoardElement[, ] positions, ref bool[, ] matchedElemPositions, int collumsNumber, int rowsNumber) {
         AlexDebugger.GetInstance().AddMessage("Checking board for new matches...", AlexDebugger.tags.Aftermatch);
         int totalMatches = 0;
         // Search for matches and flag them

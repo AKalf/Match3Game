@@ -18,6 +18,8 @@ public class Animations : MonoBehaviour {
     [SerializeField]
     Transform gamePanel = null;
 
+    private AudioSource animationsAudioSource = null;
+
     public static Animations inst = null;
     /// <summary>
     /// Scale local scale of a transfrom to zero
@@ -106,6 +108,7 @@ public class Animations : MonoBehaviour {
 
     private void Awake() {
         inst = this;
+        animationsAudioSource = this.gameObject.AddComponent<AudioSource>();
     }
 
     private void Update() {
@@ -169,6 +172,7 @@ public class Animations : MonoBehaviour {
                 break;
             case AnimationTypes.MoveTo:
                 //Debug.Log("Anim to play speed: " + animToPlay.speed + " time " + Time.deltaTime);
+
                 MoveTo(animToPlay.transform, animToPlay.speed, animToPlay.target);
                 animToPlay.isPlaying = true;
                 animToPlay.lastTimePlay = Time.time;
