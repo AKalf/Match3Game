@@ -67,15 +67,14 @@ public class BoardManager : MonoBehaviour {
     public static BoardManager inst;
 
     /// <summary>Animations currently playing / qued to play. At server-client relationship this will be send to client to be played</summary>
-    public List<AnimationMessage> animationMessages = new List<AnimationMessage>();
+    public List<Messages> messagesToClient = new List<Messages>();
 
-    /// <summary>Audio clips currently playing / qued to play. At server-client relationship this will be send to client to be played</summary>
-    public List<AudioMessage> audioMessages = new List<AudioMessage>();
     /// <summary> should be set false by the client</summary>
     public static bool areAnimationsPlaying = false;
 
     GameClient attachedClient = null;
 
+    public int currentMessageID = -1;
     void Awake() {
         inst = this;
         boardPanel = this.transform;
@@ -93,47 +92,31 @@ public class BoardManager : MonoBehaviour {
         // Debug
         //DebugCheckPanels();
 
-        int rowIndex = 0;
-        int collumIndex = 0;
+        int row = 0;
+        int collum = 0;
 
         // Assign elements to the board
 
         // foreach gameobject child of gameobject "GamePanel"
         for (int i = 0; i < gamePanel.childCount; i++) {
             // if in set bounds
-            if (collumIndex < totalCollums && rowIndex < totalRows) {
+            if (collum < totalCollums && row < totalRows) {
                 posOnWorld = new Vector3[gamePanel.childCount];
+
                 // Get a random color
                 int newColorIndex = Random.Range(0, BoardFunctions.GetAvailableColors().Length);
                 Color newColor = BoardFunctions.GetAvailableColors() [newColorIndex];
 
-                // Create a new gameobject that will hold Image component for this element
-                GameObject imageChild = new GameObject("imageChild");
-                imageChild.AddComponent<Image>();
-                imageChild.GetComponent<Image>().sprite = AssetLoader.GetDefaultElementSprite();
-                imageChild.GetComponent<Image>().preserveAspect = true;
-
-                // set parent of the new gameobject to current child proccessed
-                imageChild.transform.parent = gamePanel.GetChild(i);
-                imageChild.transform.localScale = Vector3.one;
-                imageChild.transform.localPosition = Vector3.zero;
-                //imageChild.transform.position = Vector3.zero;
-                // Set it above the gameobject that holds the "Highlight" Image component
-                imageChild.transform.SetAsFirstSibling();
                 // Create a new BoardElement instance an assign it to positions board
-                elementsPositions[collumIndex, rowIndex] = new BoardElement(gamePanel.GetChild(i).gameObject, i, newColor);
+                elementsPositions[collum, row] = new BoardElement(gamePanel.GetChild(i).gameObject, new int[] { 1, i }, newColor);
                 // new animation to show the default sprite on gameobject
-
-                //Debug.Log(positions[collumIndex, rowIndex].name + " is at position: c" + collumIndex + ", r" + rowIndex);
-                // gamePanel.GetChild(i).SetParent(null);
-
-                // elementsPositions[collumIndex, rowIndex].GetAttachedGameObject().transform.SetParent(gamePanel, true);
-                animationMessages.Add(new AnimationMessage(i, AssetLoader.GetDefaultElementSprite(), newColor));
-                collumIndex++;
+                currentMessageID += 1;
+                messagesToClient.Add(new Messages.AnimationMessage(currentMessageID, -1, Messages.AnimationMessage.AnimationMessageTypes.ChangeSprite, elementsPositions[collum, row].GetImageTransformIndex(), (int) FixedElementData.AvailableSprites.defaultElement, newColor));
+                collum++;
                 // fix collum index
-                if (collumIndex == totalCollums) {
-                    rowIndex++;
-                    collumIndex = 0;
+                if (collum == totalCollums) {
+                    row++;
+                    collum = 0;
                 }
             }
             else {
@@ -141,7 +124,8 @@ public class BoardManager : MonoBehaviour {
             }
 
         }
-        SendAnimationMessagesToClient(ref animationMessages);
+        AddWaitMessage();
+        SendMessagesToClient();
     }
     IEnumerator CoWaitForPosition() {
         yield return new WaitForEndOfFrame();
@@ -192,14 +176,17 @@ public class BoardManager : MonoBehaviour {
                 if (HandleInputForElement(firstElement, secondElement)) {
                     HandleInputForElement(secondElement, firstElement);
                     AlexDebugger.GetInstance().AddMessage("Step1 finished with matches, going to Step2: -play effects for matched elements-, input1:" + firstElement.GetAttachedGameObject().transform.name + ", input2: " + secondElement.GetAttachedGameObject().transform.name, AlexDebugger.tags.Step1);
+                    AddWaitMessage();
                     currentStep = GameStep.PlayingEffects;
                 }
                 else if (HandleInputForElement(secondElement, firstElement)) {
                     AlexDebugger.GetInstance().AddMessage("Step1 finished with matches, going to Step2: -play effects for matched elements-, input1:" + firstElement.GetAttachedGameObject().transform.name + ", input2: " + secondElement.GetAttachedGameObject().transform.name, AlexDebugger.tags.Step1);
+                    AddWaitMessage();
                     currentStep = GameStep.PlayingEffects;
                 }
                 else {
                     AlexDebugger.GetInstance().AddMessage("No matches found, when finish, go back to step0: -waiting for input-", AlexDebugger.tags.Step1);
+                    SendMessagesToClient();
                     currentStep = GameStep.WaitingInput;
                 }
                 firstElement = null;
@@ -210,7 +197,7 @@ public class BoardManager : MonoBehaviour {
                 AlexDebugger.GetInstance().AddMessage("Entering Step2: -play effects for matched elements-", AlexDebugger.tags.Step2);
                 if (PlayEffectsStep()) {
                     // AlexDebugger.GetInstance().AddMessage("Sending total animations to client: " + playingAnimations.Count, AlexDebugger.tags.Step2);
-                    SendAnimationMessagesToClient(ref animationMessages);
+                    AddWaitMessage();
                     currentStep = GameStep.OrientingElements;
                 }
                 break;
@@ -219,7 +206,7 @@ public class BoardManager : MonoBehaviour {
             case GameStep.OrientingElements:
                 AlexDebugger.GetInstance().AddMessage("Entering Step3: -reorienting board-", AlexDebugger.tags.Step3);
                 ReorientElements();
-                SendAnimationMessagesToClient(ref animationMessages);
+                AddWaitMessage();
                 //AlexDebugger.GetInstance().AddMessage("Step3: -reorienting board- has finished, moving to Step4: -replace destroyed elements", AlexDebugger.tags.Step3);
                 currentStep = GameStep.GeneratingElements;
                 break;
@@ -228,7 +215,7 @@ public class BoardManager : MonoBehaviour {
                 //AlexDebugger.GetInstance().AddMessage("Entering Step4: -replace destroyed elements-", AlexDebugger.tags.Step4);
                 GenerateNewElemetns();
                 //AlexDebugger.GetInstance().AddMessage("Sending total animations to client: " + playingAnimations.Count, AlexDebugger.tags.Step4);
-                SendAnimationMessagesToClient(ref animationMessages);
+                AddWaitMessage();
                 // AlexDebugger.GetInstance().AddMessage("Element: " + positions[bestInputCollum, bestInputRow].GetAttachedGameObject().name + " has the best score possible: " + maxOutput, AlexDebugger.tags.Step4);
                 //AlexDebugger.GetInstance().AddMessage("Step4 -Replace destroyed elements- has finished, moving to Step5 -Aftermatch-", AlexDebugger.tags.Step4);
                 currentStep = GameStep.CheckingBoardForMatches;
@@ -250,7 +237,7 @@ public class BoardManager : MonoBehaviour {
                     AlexDebugger.GetInstance().AddMessage("No new matches found, flagging potential input", AlexDebugger.tags.Step5);
                     currentStep = GameStep.MarkingPossibleInputs;
                 }
-                SendAnimationMessagesToClient(ref animationMessages);
+                AddWaitMessage();
                 break;
             case GameStep.MarkingPossibleInputs:
                 //Debug.Log("### AfterMatch ### No new matches found");
@@ -265,7 +252,8 @@ public class BoardManager : MonoBehaviour {
                     AlexDebugger.GetInstance().AddMessage("Step5 -Aftermatch- has finished, with state -Has available input-,  moving to Step0 -Wait for input-", AlexDebugger.tags.Step5);
                     currentStep = GameStep.WaitingInput;
                 }
-                SendAnimationMessagesToClient(ref animationMessages);
+                AddWaitMessage();
+                SendMessagesToClient();
                 break;
         }
     }
@@ -302,27 +290,28 @@ public class BoardManager : MonoBehaviour {
             BoardFunctions.SwapElements(firstElement, secondElement, this, rewire : true);
         }
         // Send animations to client and empty list
-        SendAnimationMessagesToClient(ref animationMessages);
+        AddWaitMessage();
     }
 
     private bool PlayEffectsStep() {
-        BoardElement lastElementProcessed = null;
+        BoardElement lastElementProcessed = secondElement;
         bool areThereChangesOnBoard = false;
         for (int row = 0; row < elementsPositions.GetLength(1); row++) {
             for (int collum = 0; collum < elementsPositions.GetLength(0); collum++) {
                 if (matchedElemPositions[collum, row] == true) {
-                    if (BoardFunctions.DestroyBoardElement(collum, row, ref elementsPositions, ref matchedElemPositions, ref animationMessages, lastElementProcessed)) {
+                    BoardFunctions.PlayMatchEffectAnimations(collum, row, this);
+                    if (BoardFunctions.DestroyBoardElement(collum, row, this, lastElementProcessed)) {
                         areThereChangesOnBoard = true;
                     }
-                    BoardFunctions.PlayMatchEffectAnimations(collum, row, elementsPositions, ref animationMessages, swappingSpeed);
+
                 }
                 lastElementProcessed = elementsPositions[collum, row];
-                BoardFunctions.ToggleHighlightCell(collum, row, elementsPositions, false, highlightColor);
+                BoardFunctions.ToggleHighlightCell(collum, row, this, false);
             }
         }
 
         if (!areThereChangesOnBoard) {
-            AlexDebugger.GetInstance().AddMessage("Step2 finished: -play effects for matched elements-, go to Step3: -reorient elements- " + animationMessages.Count, AlexDebugger.tags.Step2);
+            AlexDebugger.GetInstance().AddMessage("Step2 finished: -play effects for matched elements-, go to Step3: -reorient elements- " + messagesToClient.Count, AlexDebugger.tags.Step2);
             return true;
         }
         else {
@@ -336,7 +325,7 @@ public class BoardManager : MonoBehaviour {
         for (int collum = 0; collum < totalCollums; collum++) {
             //AlexDebugger.GetInstance().AddMessage("Moving element: " + elementsPositions[collum, row].GetAttachedGameObject().transform.name + " upwards", AlexDebugger.tags.Step3);
             if (BoardFunctions.MoveMatchedElementUpwards(collum, totalRows - 1, this) && !hasSFXplayed) {
-                audioMessages.Add(new AudioMessage(AssetLoader.GetCellDropSFX(), audioMessages.Count, -1, 0.0f, Random.Range(0.0f, 2.0f)));
+                messagesToClient.Add(new Messages.AudioMessage(AssetLoader.GetCellDropSFX(), messagesToClient.Count, -1, 0.0f, Random.Range(0.5f, 2.0f)));
                 hasSFXplayed = true;
             }
 
@@ -344,7 +333,7 @@ public class BoardManager : MonoBehaviour {
     }
 
     private void GenerateNewElemetns() {
-        audioMessages.Add(new AudioMessage(AssetLoader.GetCellDropSFX(), audioMessages.Count, -1, 0.15f, Random.Range(0.0f, 2.0f)));
+        messagesToClient.Add(new Messages.AudioMessage(AssetLoader.GetCellDropSFX(), messagesToClient.Count, -1, 0.15f, Random.Range(0.5f, 2.0f)));
         bool[, ] searchedElements = new bool[positionsDestroyed.GetLength(0), positionsDestroyed.GetLength(1)];
         for (int row = 0; row < elementsPositions.GetLength(1); row++) {
             for (int collum = 0; collum < elementsPositions.GetLength(0); collum++) {
@@ -363,11 +352,11 @@ public class BoardManager : MonoBehaviour {
                 if (BoardFunctions.IsPotentialInput(collum, row, elementsPositions, matchedElemPositions, totalCollums, totalRows) > 0) {
                     //
                     AlexDebugger.GetInstance().AddMessage(elementsPositions[collum, row].GetAttachedGameObject() + " is potential input", AlexDebugger.tags.Step5);
-                    BoardFunctions.ToggleHighlightCell(collum, row, elementsPositions, true, highlightColor);
+                    BoardFunctions.ToggleHighlightCell(collum, row, this, true);
                     hasPossibleInput = true;
                 }
                 else {
-                    BoardFunctions.ToggleHighlightCell(collum, row, elementsPositions, false, highlightColor);
+                    BoardFunctions.ToggleHighlightCell(collum, row, this, false);
                 }
             }
         }
@@ -380,8 +369,7 @@ public class BoardManager : MonoBehaviour {
             }
         }
     }
-    public bool
-    HandleInputForElement(BoardElement element, BoardElement otherElement) {
+    public bool HandleInputForElement(BoardElement element, BoardElement otherElement) {
         bool areThereMatches = false;
         if (element.GetElementClassType() == typeof(BombBoardElement)) {
             if (otherElement.GetElementClassType() == typeof(CrossBoardElement)) {
@@ -392,13 +380,13 @@ public class BoardManager : MonoBehaviour {
                 AlexDebugger.GetInstance().AddMessage(element.GetAttachedGameObject() + " bomb style set to double bomb", AlexDebugger.tags.Step1);
                 ((BombBoardElement) element).SetExplosionStyleTo(BombBoardElement.BombExplosionStyle.DoubleBombStyle);
             }
-            element.OnElementDestruction(elementsPositions, ref matchedElemPositions);
+            element.OnElementDestruction(this);
             AlexDebugger.GetInstance().AddMessage("first element was a bomb, go to step2: -play effects for matched elements-", AlexDebugger.tags.Step1);
             areThereMatches = true;
         }
         else if (element.GetElementClassType() == typeof(BellBoardElement)) {
             AlexDebugger.GetInstance().AddMessage("first element was a bell, go to step2: -play effects for matched elements-", AlexDebugger.tags.Step1);
-            element.OnElementDestruction(ref elementsPositions, ref matchedElemPositions, ref animationMessages, otherElement);
+            element.OnElementDestruction(this, otherElement);
             areThereMatches = true;
         }
         else {
@@ -414,19 +402,16 @@ public class BoardManager : MonoBehaviour {
         return areThereMatches;
     }
 
-    public void SendAnimationMessagesToClient(ref List<AnimationMessage> animMsg) {
-        if (animMsg.Count > 0) {
-            Animations.SetAnimationMessages(animMsg.ToArray());
-            animMsg.Clear();
-            areAnimationsPlaying = true;
-        }
-        if (audioMessages.Count > 0) {
-            AudioManager.ReceiveAudioMessages(audioMessages);
-            audioMessages.Clear();
-
-        }
+    public void AddWaitMessage() {
+        currentMessageID += 1;
+        messagesToClient.Add(new Messages(currentMessageID, -1, Messages.MessageTypes.Wait));
+        currentMessageID = -1;
     }
 
+    public void SendMessagesToClient() {
+        Client.ReceiveMessagesFromServer(messagesToClient);
+        messagesToClient.Clear();
+    }
     /// <summary>Is boardManager available</summary>
     public bool IsAvailable() {
         if (currentStep == GameStep.WaitingInput && !areAnimationsPlaying) {

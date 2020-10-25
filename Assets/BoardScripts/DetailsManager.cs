@@ -1,4 +1,4 @@
-﻿using System.Collections;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
@@ -19,8 +19,11 @@ public class DetailsManager : MonoBehaviour {
 
     private static DetailsManager instance = null;
 
+    private static BoardManager board = null;
+
     private static string[] scoreTextHistory = new string[5];
     private static Sprite[] scoreImageHistory = new Sprite[5];
+
     private void Awake() {
         if (instance == null) {
             instance = this;
@@ -32,9 +35,14 @@ public class DetailsManager : MonoBehaviour {
 
     // Start is called before the first frame update
     void Start() {
-
+        board = GetComponent<BoardManager>();
         balanceText = detailsPanel.GetChild(1).GetComponent<Text>();
         swapCostText = detailsPanel.GetChild(2).GetComponent<Text>();
+        for (int i = 0; i < scoreImageHistory.Length; i++) {
+            scoreTextHistory[i] = "";
+            scoreImageHistory[i] = AssetLoader.GetSprite(FixedElementData.AvailableSprites.transparent);
+
+        }
         StartCoroutine(CloseInfoPanel());
     }
 
@@ -58,8 +66,9 @@ public class DetailsManager : MonoBehaviour {
         scoreImageHistory[scoreImageHistory.Length - 1] = imageNewEntry;
         instance.scoreImageParent.GetChild(scoreImageHistory.Length - 1).GetComponent<Image>().sprite = imageNewEntry;
     }
-    public static void WriteDestroyedCashElement(CashBoardElement element) {
-        ScrollArrays("+ " + element.GetCashValue(), element.GetElementSprite());
+    public static void WriteDestroyedCashElement(string value, Sprite sprite) {
+
+        ScrollArrays("+ " + value, sprite);
     }
 
     public static void ChangeBalanceTextTo(float amount) {
@@ -86,11 +95,11 @@ public class DetailsManager : MonoBehaviour {
 
     public void ToggleInfoPanel() {
         if (isInfoShown) {
-            Animations.AddAnimationMoveToPosition(infoPanel.transform, BoardManager.inst.GetSwappingSpeed(), -Vector3.right * infoPanel.rect.width);
+            Animations.AddAnimationMoveToPosition(-1, -1, infoPanel.transform, BoardManager.inst.GetSwappingSpeed(), -Vector3.right * infoPanel.rect.width);
             isInfoShown = false;
         }
         else {
-            Animations.AddAnimationMoveToPosition(infoPanel.transform, BoardManager.inst.GetSwappingSpeed(), Vector3.zero);
+            Animations.AddAnimationMoveToPosition(-1, -1, infoPanel.transform, BoardManager.inst.GetSwappingSpeed(), Vector3.zero);
             isInfoShown = true;
         }
     }

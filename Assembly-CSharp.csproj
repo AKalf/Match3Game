@@ -67,6 +67,7 @@
      <Compile Include="Assets\BoardScripts\BoardManager.cs" />
      <Compile Include="Assets\BoardScripts\DetailsManager.cs" />
      <Compile Include="Assets\BoardScripts\MoneyManager.cs" />
+     <Compile Include="Assets\Client.cs" />
      <Compile Include="Assets\FixedElementData.cs" />
      <Compile Include="Assets\GraphBoardDepricated.cs" />
      <Compile Include="Assets\InteractionScripts\InputManager.cs" />
@@ -74,6 +75,7 @@
      <Compile Include="Assets\InteractionScripts\QuitApplicationButton.cs" />
      <Compile Include="Assets\InteractionScripts\RaycastOnClick.cs" />
      <Compile Include="Assets\InteractionScripts\SerializedAction.cs" />
+     <Compile Include="Assets\Messages.cs" />
      <Compile Include="Assets\Server.cs" />
  <Reference Include="Unity.Timeline.Editor">
  <HintPath>C:/Users/ALEX/Documents/Unity Projects/Match3Game/Library/ScriptAssemblies/Unity.Timeline.Editor.dll</HintPath>

@@ -6,15 +6,23 @@ public class AssetLoader : MonoBehaviour {
     private static class PathManager {
 
         // Sprites
-        public const string boardElementDefaultIconPath = "SpriteResources/SquareIcon";
+        public static string[] spritesPaths = new string[] {
+            "SpriteResources/SquareIcon",
+            "SpriteResources/TransparentIcon",
+            "SpriteResources/HighlightIcon",
 
-        public static readonly string[] boardElementCashIconsPaths = new string[FixedElementData.numberOfCashTypes] { "SpriteResources/WhiteCoinIcon", "SpriteResources/GreyCoinIcon", "SpriteResources/BlueCoinIcon", "SpriteResources/GreenCoinIcon", "SpriteResources/PurpleCoinIcon", "SpriteResources/RedCoinIcon", "SpriteResources/GoldCoinIcon" };
+            "SpriteResources/WhiteCoinIcon",
+            "SpriteResources/GreyCoinIcon",
+            "SpriteResources/BlueCoinIcon",
+            "SpriteResources/GreenCoinIcon",
+            "SpriteResources/PurpleCoinIcon",
+            "SpriteResources/RedCoinIcon",
+            "SpriteResources/GoldCoinIcon",
 
-        public const string boardElementCrossIconPath = "SpriteResources/CrossIcon";
-
-        public const string boardElementBombIconPath = "SpriteResources/BombIcon";
-
-        public const string boardElementBellIconPath = "SpriteResources/BellIcon";
+            "SpriteResources/CrossIcon",
+            "SpriteResources/BombIcon",
+            "SpriteResources/BellIcon"
+        };
 
         // Sound Effects
         public const string cellDrop_SFX = "AudioResources/Swap_Sound";
@@ -23,15 +31,7 @@ public class AssetLoader : MonoBehaviour {
 
     }
 
-    Sprite defaultElementSprite = null;
-
-    Sprite[] cashElementSprites;
-
-    Sprite crossElementSprite = null;
-
-    Sprite bombElementSprite = null;
-
-    Sprite bellElementSprite = null;
+    private Sprite[] sprites = new Sprite[13];
 
     AudioClip cellDrop_SFX = null;
 
@@ -41,24 +41,15 @@ public class AssetLoader : MonoBehaviour {
 
     private void Awake() {
         inst = this;
-        defaultElementSprite = (Sprite) Resources.Load(PathManager.boardElementDefaultIconPath, typeof(Sprite));
-        //Debug.Log("Sprite: " + defaultElementSprite.name);
-        cashElementSprites = new Sprite[PathManager.boardElementCashIconsPaths.Length];
-        for (int i = 0; i < cashElementSprites.Length; i++) {
-            cashElementSprites[i] = (Sprite) Resources.Load(PathManager.boardElementCashIconsPaths[i], typeof(Sprite));
+        for (int i = 0; i < sprites.Length; i++) {
+            // Debug.Log(PathManager.spritesPaths[i]);
+            sprites[i] = (Sprite) Resources.Load(PathManager.spritesPaths[i], typeof(Sprite));
         }
-
-        //Debug.Log("Sprite: " + cashElementSprite.name);
-        crossElementSprite = (Sprite) Resources.Load(PathManager.boardElementCrossIconPath, typeof(Sprite));
-
-        bombElementSprite = (Sprite) Resources.Load(PathManager.boardElementBombIconPath, typeof(Sprite));
-
-        bellElementSprite = (Sprite) Resources.Load(PathManager.boardElementBellIconPath, typeof(Sprite));
-
         // Audio clips
         cellDrop_SFX = (AudioClip) Resources.Load(PathManager.cellDrop_SFX, typeof(AudioClip));
 
         coinWin_SFX = (AudioClip) Resources.Load(PathManager.coinWin_SFX, typeof(AudioClip));
+
     }
     // Start is called before the first frame update
     void Start() {
@@ -69,23 +60,14 @@ public class AssetLoader : MonoBehaviour {
     void Update() {
 
     }
-    public static Sprite GetDefaultElementSprite() {
-        return inst.defaultElementSprite;
+    public static Sprite GetSprite(FixedElementData.AvailableSprites sprite) {
+        return inst.sprites[(int) sprite];
     }
-    public static Sprite GetCashElementSprite(int index) {
-        return inst.cashElementSprites[index];
-    }
-    public static Sprite GetCrossElementSprite() {
-        return inst.crossElementSprite;
-    }
-    public static Sprite GetBombElementSprite() {
-        return inst.bombElementSprite;
-    }
-    public static Sprite GetBellElementSprite() {
-        return inst.bellElementSprite;
+    public static Sprite GetSprite(int indexInArray) {
+        return inst.sprites[indexInArray];
     }
 
-    // Audio clips
+    // Audio clips  
     public static AudioClip GetCellDropSFX() {
         return inst.cellDrop_SFX;
     }

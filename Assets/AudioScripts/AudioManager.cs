@@ -9,11 +9,12 @@ public class AudioManager : MonoBehaviour {
 
     static AudioSource[] sources = new AudioSource[5];
 
-    static Queue<AudioMessage> messagesToBePlayed = new Queue<AudioMessage>();
+    static Queue<Messages.AudioMessage> messagesToBePlayed = new Queue<Messages.AudioMessage>();
     static int[] IDsPlayingAtSourceArrayIndex = new int[sources.Length];
 
     static List<int> IDsPlayed = new List<int>();
 
+    static bool isAudioPlaying = false;
     void Awake() {
         for (int i = 0; i < sources.Length; i++) {
             sources[i] = this.gameObject.AddComponent<AudioSource>();
@@ -27,14 +28,18 @@ public class AudioManager : MonoBehaviour {
     // Update is called once per frame
     void Update() {
         if (messagesToBePlayed.Count > 0) {
+            isAudioPlaying = true;
             PlayMessages();
+        }
+        else {
+            isAudioPlaying = false;
         }
     }
     private void PlayMessages() {
         int sourceAvailable = GetAvailableSource();
 
         if (sourceAvailable > -1) {
-            AudioMessage msg = messagesToBePlayed.Dequeue();
+            Messages.AudioMessage msg = messagesToBePlayed.Dequeue();
             if (msg.messageID == -1000) {
                 IDsPlayed.Clear();
                 return;
@@ -59,7 +64,7 @@ public class AudioManager : MonoBehaviour {
         return sourceAvailable;
     }
 
-    private void PlayNextMessage(AudioMessage msg, int availableSoure) {
+    private void PlayNextMessage(Messages.AudioMessage msg, int availableSoure) {
         if (msg.dependencyID > -1 && !IDsPlayed.Contains(msg.dependencyID)) {
             messagesToBePlayed.Enqueue(msg);
             PlayNextMessage(messagesToBePlayed.Dequeue(), availableSoure);
@@ -75,13 +80,16 @@ public class AudioManager : MonoBehaviour {
         source.clip = clip;
         source.PlayDelayed(delay);
     }
-    public static void ReceiveAudioMessages(List<AudioMessage> messages) {
-        foreach (AudioMessage message in messages) {
+    public static void ReceiveAudioMessages(List<Messages.AudioMessage> messages) {
+        foreach (Messages.AudioMessage message in messages) {
             messagesToBePlayed.Enqueue(message);
         }
         // put a clear message to the end
-        messagesToBePlayed.Enqueue(new AudioMessage(null, -1000));
+        //messagesToBePlayed.Enqueue(new Messages.AudioMessage(null, -1000));
 
+    }
+    public static bool IsAudioPlaying() {
+        return isAudioPlaying;
     }
 
 }

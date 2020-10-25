@@ -32,7 +32,7 @@ public class OnDragEvent : MonoBehaviour {
 
     public void Ray(PointerEventData data) {
         PointerEventData pointerData = new PointerEventData(EventSystem.current);
-        Debug.Log("Ray called");
+        //Debug.Log("Ray called");
         pointerData.position = Input.mousePosition;
 
         List<RaycastResult> results = new List<RaycastResult>();
@@ -41,7 +41,7 @@ public class OnDragEvent : MonoBehaviour {
         if (results.Count > 0) {
             foreach (RaycastResult r in results) {
                 if (r.gameObject.GetComponent<OnDragEvent>() != null) {
-                    Debug.Log("r: " + r.gameObject);
+                    //Debug.Log("r: " + r.gameObject);
                     InputManager.GetInstance().HandleInputForCell(r.gameObject);
                     results.Clear();
                     return;

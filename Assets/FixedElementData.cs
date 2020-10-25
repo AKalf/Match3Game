@@ -9,5 +9,19 @@ public static class FixedElementData {
     public const int numberOfCashTypes = 7;
     public static readonly float[] cashElementsValues = new float[numberOfCashTypes] { 0.01f, 0.02f, 0.10f, 0.20f, 1, 2, 6 };
     public static readonly int[] cashElementsChances = new int[numberOfCashTypes] { 35, 25, 16, 12, 10, 8, 5 };
-
+    public enum AvailableSprites {
+        defaultElement,
+        transparent,
+        highlight,
+        cashWhite,
+        cashGrey,
+        cashBlue,
+        cashGreen,
+        cashPurple,
+        cashRed,
+        cashGold,
+        cross,
+        bomb,
+        bell
+    }
 }
