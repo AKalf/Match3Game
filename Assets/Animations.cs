@@ -4,21 +4,29 @@ using UnityEngine;
 
 public class Animations : MonoBehaviour {
 
-    public static Dictionary<Transform, List<Animation>> animatedTransforms = new Dictionary<Transform, List<Animation>>();
-    static List<int> animationIDsPlayed = new List<int>();
+    public static Dictionary<RectTransform, List<Animation>> animatedTransforms = new Dictionary<RectTransform, List<Animation>>();
+    //static List<int> animationIDsPlayed = new List<int>();
 
     private static Animation currentAnimation = null;
-    List<Transform> toRemove = new List<Transform>();
+    List<RectTransform> toRemove = new List<RectTransform>();
 
     private double timer = 0.0f;
     private double timerThreshold = 0.01f;
 
     /// <summary> Holds cells</summary>
     [SerializeField]
-    Transform boardPanel = null;
+    RectTransform canvasTransform = null;
+    RectTransform boardTransform = null;
+    RectTransform gamePanel = null;
+    [SerializeField]
+    RectTransform popUpPanel = null;
+    private static UnityEngine.UI.Text popUpText = null;
+    private static UnityEngine.UI.Image popUpImage = null;
 
     private AudioSource animationsAudioSource = null;
     private static bool areAnimationsPlaying = false;
+
+    private static Vector3[, ] positionsOnWorld;
 
     public static Animations inst = null;
 
@@ -26,7 +34,7 @@ public class Animations : MonoBehaviour {
     /// Scale local scale of a transfrom to one
     /// </summary>
     public static Animation AddAnimationScaleTo(Messages.AnimationMessage msg) {
-        Transform transfromToScale = GetMessageTransform(msg);
+        RectTransform transfromToScale = GetMessageTransform(msg);
         if (animatedTransforms.ContainsKey(transfromToScale) == false) {
             animatedTransforms.Add(transfromToScale, new List<Animation>());
         }
@@ -37,22 +45,40 @@ public class Animations : MonoBehaviour {
     }
 
     public static Animation AddAnimationChangeSprite(Messages.AnimationMessage msg) {
-        Transform elementTransform = GetMessageTransform(msg);
+        RectTransform elementTransform = GetMessageTransform(msg);
         if (animatedTransforms.ContainsKey(elementTransform) == false) {
             animatedTransforms.Add(elementTransform, new List<Animation>());
         }
-        Animation anim = new Animation(msg.messageID, msg.dependencyID, msg.type, elementTransform, AssetLoader.GetSprite(msg.spriteIndexInArray), msg.targetColor);
+        Animation anim = new Animation(msg.messageID, msg.dependencyID, msg.type, elementTransform, AssetLoader.GetSprite(msg.spriteIndexInArray), new Color(msg.targetX, msg.targetY, msg.targetZ, msg.targetW));
         animatedTransforms[elementTransform].Add(anim);
         // transfromToScale.GetComponent<BoardElement>().AddAnimationToPlay(anim);
         return anim;
     }
 
     public static Animation AddAnimationScrollWinHistory(Messages.AnimationMessage msg) {
-        Transform elementTransform = GetMessageTransform(msg);
+        RectTransform elementTransform = GetMessageTransform(msg);
         if (animatedTransforms.ContainsKey(elementTransform) == false) {
             animatedTransforms.Add(elementTransform, new List<Animation>());
         }
-        Animation anim = new Animation(msg.messageID, msg.dependencyID, elementTransform, msg.text, AssetLoader.GetSprite(msg.spriteIndexInArray));
+        Animation anim = new Animation(msg.messageID, msg.dependencyID, Messages.AnimationMessage.AnimationMessageTypes.Scroll, elementTransform, msg.text, AssetLoader.GetSprite(msg.spriteIndexInArray));
+        animatedTransforms[elementTransform].Add(anim);
+        // transfromToScale.GetComponent<BoardElement>().AddAnimationToPlay(anim);
+        return anim;
+    }
+
+    public static Animation AddAnimationPopUpBox(Messages.AnimationMessage msg) {
+        RectTransform elementTransform = GetMessageTransform(msg);
+        if (animatedTransforms.ContainsKey(elementTransform) == false) {
+            animatedTransforms.Add(elementTransform, new List<Animation>());
+        }
+        Sprite spr = null;
+        if (msg.spriteIndexInArray > -1) {
+            spr = AssetLoader.GetSprite(msg.spriteIndexInArray);
+        }
+        else {
+            spr = AssetLoader.GetSprite(ConstantValues.AvailableSprites.transparent);
+        }
+        Animation anim = new Animation(msg.messageID, msg.dependencyID, Messages.AnimationMessage.AnimationMessageTypes.PopUpBox, elementTransform, msg.text, spr);
         animatedTransforms[elementTransform].Add(anim);
         // transfromToScale.GetComponent<BoardElement>().AddAnimationToPlay(anim);
         return anim;
@@ -62,16 +88,22 @@ public class Animations : MonoBehaviour {
     /// Move a transfrom to a position
     /// </summary>
     public static Animation AddAnimationMoveToPosition(Messages.AnimationMessage msg) {
-        Transform tranformToMove = GetMessageTransform(msg);
+        RectTransform tranformToMove = GetMessageTransform(msg);
         if (animatedTransforms.ContainsKey(tranformToMove) == false) {
             animatedTransforms.Add(tranformToMove, new List<Animation>());
         }
-        Animation anim = new Animation(msg.messageID, msg.dependencyID, tranformToMove, msg.speed, Messages.AnimationMessage.AnimationMessageTypes.MoveTo, new Vector3(msg.targetX, msg.targetY, msg.targetZ));
+        Animation anim;
+        if (msg.posCollum == -1 || msg.posRow == -1) {
+            anim = new Animation(msg.messageID, msg.dependencyID, tranformToMove, msg.speed, Messages.AnimationMessage.AnimationMessageTypes.MoveTo, new Vector3(msg.targetX, msg.targetY, msg.targetZ));
+        }
+        else {
+            anim = new Animation(msg.messageID, msg.dependencyID, tranformToMove, msg.speed, Messages.AnimationMessage.AnimationMessageTypes.MoveTo, positionsOnWorld[msg.posCollum, msg.posRow]);
+        }
         // tranformToMove.GetComponent<BoardElement>().AddAnimationToPlay(anim);
         animatedTransforms[tranformToMove].Add(anim);
         return anim;
     }
-    public static Animation AddAnimationMoveToPosition(int messageID, int dependencyID, Transform tranformToMove, float speed, Vector3 target) {
+    public static Animation AddAnimationMoveToPosition(int messageID, int dependencyID, RectTransform tranformToMove, float speed, Vector3 target) {
         if (animatedTransforms.ContainsKey(tranformToMove) == false) {
             animatedTransforms.Add(tranformToMove, new List<Animation>());
         }
@@ -99,7 +131,6 @@ public class Animations : MonoBehaviour {
     }
 
     public static void ReceiveAnimationMessages(List<Messages.AnimationMessage> messages) {
-        animationIDsPlayed.Clear();
         for (int i = 0; i < messages.Count; i++) {
             switch (messages[i].type) {
                 case Messages.AnimationMessage.AnimationMessageTypes.MoveTo:
@@ -114,20 +145,39 @@ public class Animations : MonoBehaviour {
                 case Messages.AnimationMessage.AnimationMessageTypes.Scroll:
                     AddAnimationScrollWinHistory(messages[i]);
                     break;
+                case Messages.AnimationMessage.AnimationMessageTypes.MoveToHolder:
+                    AddAnimationMoveToPosition(messages[i].messageID, messages[i].dependencyID, GetMessageTransform(messages[i]), messages[i].speed, GetMessageTransform(ConstantValues.GetHolderIndexInHierarchy(messages[i].posCollum)).anchoredPosition);
+                    break;
+                case Messages.AnimationMessage.AnimationMessageTypes.PopUpBox:
+                    AddAnimationPopUpBox(messages[i]);
+                    break;
 
             }
         }
 
     }
 
-    private static Transform GetMessageTransform(Messages.AnimationMessage message) {
-        Transform trans = inst.boardPanel;
+    private static RectTransform GetMessageTransform(Messages.AnimationMessage message) {
+        RectTransform trans = inst.canvasTransform;
 
         for (int y = 0; y < message.indexInHierarchy.Length; y++) {
             // Debug.Log(message.type);
             // Debug.Log("index: " + y);
             // Debug.Log(trans.name);
-            trans = trans.GetChild(message.indexInHierarchy[y]);
+            trans = trans.GetChild(message.indexInHierarchy[y]).GetComponent<RectTransform>();
+        }
+        //Debug.Log("End");
+        return trans;
+    }
+
+    private static RectTransform GetMessageTransform(int[] indexInHierarchy) {
+        RectTransform trans = inst.canvasTransform;
+
+        for (int y = 0; y < indexInHierarchy.Length; y++) {
+            // Debug.Log(message.type);
+            // Debug.Log("index: " + y);
+            // Debug.Log(trans.name);
+            trans = trans.GetChild(indexInHierarchy[y]).GetComponent<RectTransform>();
         }
         //Debug.Log("End");
         return trans;
@@ -136,16 +186,25 @@ public class Animations : MonoBehaviour {
     private void Awake() {
         inst = this;
         animationsAudioSource = this.gameObject.AddComponent<AudioSource>();
+        boardTransform = canvasTransform.GetChild(0).GetComponent<RectTransform>();
+        gamePanel = boardTransform.GetChild(1).GetComponent<RectTransform>();
+        positionsOnWorld = new Vector3[ConstantValues.totalCollums, ConstantValues.totalRows];
+        popUpText = popUpPanel.GetChild(0).GetComponent<UnityEngine.UI.Text>();
+        popUpImage = popUpPanel.GetChild(1).GetComponent<UnityEngine.UI.Image>();
+    }
+
+    private void Start() {
+        StartCoroutine("CoWaitForPosition");
     }
 
     private void Update() {
 
-        if (animatedTransforms.Keys.Count > 0) {
+        if (animatedTransforms.Keys.Count > 0 && !Client.GetIfGameIsPaused()) {
             areAnimationsPlaying = true;
-            foreach (Transform trans in animatedTransforms.Keys) {
+            foreach (RectTransform trans in animatedTransforms.Keys) {
 
                 int indexOfNextAnimation = 0;
-                while (animatedTransforms[trans][indexOfNextAnimation].dependencyID != -1 && animationIDsPlayed.Contains(animatedTransforms[trans][indexOfNextAnimation].dependencyID)) {
+                while (animatedTransforms[trans][indexOfNextAnimation].dependencyID != -1 && Client.GetPlayedMessagesIDs().Contains(animatedTransforms[trans][indexOfNextAnimation].dependencyID)) {
                     indexOfNextAnimation++;
                 }
                 currentAnimation = animatedTransforms[trans][indexOfNextAnimation];
@@ -156,7 +215,7 @@ public class Animations : MonoBehaviour {
                     //if (currentAnimation.speed > 5000) {
                     //AlexDebugger.GetInstance().AddMessage("Transfrom " + currentAnimation.transform.name + " moved to holders position", AlexDebugger.tags.Animations);
                     //}
-                    animationIDsPlayed.Add(currentAnimation.animationID);
+                    Client.AddProccessedMessageID(currentAnimation.animationID);
                     animatedTransforms[currentAnimation.transform].Remove(currentAnimation);
                     if (animatedTransforms[currentAnimation.transform].Count < 1) {
                         toRemove.Add(trans);
@@ -169,7 +228,7 @@ public class Animations : MonoBehaviour {
                 }
             }
             if (toRemove.Count > 0) {
-                foreach (Transform t in toRemove) {
+                foreach (RectTransform t in toRemove) {
                     animatedTransforms.Remove(t);
                 }
                 if (animatedTransforms.Keys.Count < 1) {
@@ -179,9 +238,21 @@ public class Animations : MonoBehaviour {
             }
 
         }
-        else {
+        else if (animatedTransforms.Count == 0) {
             areAnimationsPlaying = false;
         }
+    }
+
+    IEnumerator CoWaitForPosition() {
+        yield return new WaitForEndOfFrame();
+        int i = 0;
+        for (int row = 0; row < ConstantValues.totalRows; row++) {
+            for (int collum = 0; collum < ConstantValues.totalCollums; collum++) {
+                positionsOnWorld[collum, row] = gamePanel.GetChild(i).GetComponent<RectTransform>().anchoredPosition;
+                i++;
+            }
+        }
+
     }
 
     public void PlayAnimation(Animations.Animation animToPlay) {
@@ -220,14 +291,24 @@ public class Animations : MonoBehaviour {
                 animToPlay.hasFinished = true;
                 animToPlay.isPlaying = false;
                 break;
+            case Messages.AnimationMessage.AnimationMessageTypes.PopUpBox:
+                animToPlay.isPlaying = true;
+                popUpText.text = animToPlay.text;
+                popUpImage.sprite = animToPlay.targetSprite;
+                popUpPanel.gameObject.SetActive(true);
+                Client.PauseGame();
+                animToPlay.hasFinished = true;
+                animToPlay.isPlaying = false;
+                break;
         }
     }
 
     public static bool AreAnimationsPlaying() {
         return areAnimationsPlaying;
     }
+
     public class Animation {
-        public Transform transform = null;
+        public RectTransform transform = null;
         public int animationID = -1;
         public int dependencyID = -1;
         public float speed = 0.0f;
@@ -242,8 +323,8 @@ public class Animations : MonoBehaviour {
 
         public string text;
 
-        // Used for scale and move
-        public Animation(int animationID, int dependencyID, Transform transform, float speed, Messages.AnimationMessage.AnimationMessageTypes type, Vector3 target) {
+        /// <summary>Used for scale and movement animations</summary>
+        public Animation(int animationID, int dependencyID, RectTransform transform, float speed, Messages.AnimationMessage.AnimationMessageTypes type, Vector3 target) {
             this.animationID = animationID;
             this.dependencyID = dependencyID;
             this.transform = transform;
@@ -252,8 +333,8 @@ public class Animations : MonoBehaviour {
             this.target = target;
         }
 
-        // Used for change sprite with color
-        public Animation(int animationID, int dependencyID, Messages.AnimationMessage.AnimationMessageTypes type, Transform imageComponentTransform, Sprite target, Color color) {
+        /// <summary>Used for change sprite and color animations</summary>
+        public Animation(int animationID, int dependencyID, Messages.AnimationMessage.AnimationMessageTypes type, RectTransform imageComponentTransform, Sprite target, Color color) {
             this.animationID = animationID;
             this.dependencyID = dependencyID;
             this.transform = imageComponentTransform;
@@ -262,8 +343,8 @@ public class Animations : MonoBehaviour {
             this.targetSprite = target;
             targetColor = color;
         }
-        // Used for change sprite 
-        public Animation(int animationID, int dependencyID, Messages.AnimationMessage.AnimationMessageTypes type, Transform imageComponentTransform, Sprite target) {
+        /// <summary>Used for change sprite animations</summary>
+        public Animation(int animationID, int dependencyID, Messages.AnimationMessage.AnimationMessageTypes type, RectTransform imageComponentTransform, Sprite target) {
             this.animationID = animationID;
             this.dependencyID = dependencyID;
             this.transform = imageComponentTransform;
@@ -273,12 +354,13 @@ public class Animations : MonoBehaviour {
             this.targetColor = Color.white;
         }
 
-        public Animation(int animationID, int dependencyID, Transform imageComponentTransform, string text, Sprite target) {
+        /// <summary>Used for scroll and pop-up messages animations</summary>
+        public Animation(int animationID, int dependencyID, Messages.AnimationMessage.AnimationMessageTypes type, RectTransform imageComponentTransform, string text, Sprite target) {
             this.animationID = animationID;
             this.dependencyID = dependencyID;
             this.speed = 10000000;
             this.transform = imageComponentTransform;
-            this.animationType = Messages.AnimationMessage.AnimationMessageTypes.Scroll;
+            this.animationType = type;
             this.targetSprite = target;
             this.text = text;
         }

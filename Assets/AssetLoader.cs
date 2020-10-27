@@ -60,7 +60,7 @@ public class AssetLoader : MonoBehaviour {
     void Update() {
 
     }
-    public static Sprite GetSprite(FixedElementData.AvailableSprites sprite) {
+    public static Sprite GetSprite(ConstantValues.AvailableSprites sprite) {
         return inst.sprites[(int) sprite];
     }
     public static Sprite GetSprite(int indexInArray) {

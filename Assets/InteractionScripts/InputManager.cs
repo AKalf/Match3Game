@@ -36,7 +36,7 @@ public class InputManager : MonoBehaviour {
     void Update() {}
     public void HandleInputForCell(GameObject cell) {
         //Debug.Log("Input cell: " + cell.gameObject.name);
-        if (!BoardManager.GetInstance().IsAvailable() || cell == null || cell == firstCell) {
+        if (Animations.AreAnimationsPlaying() || cell == null || cell == firstCell || !Client.GetIfServerAvailable()) {
             return;
         }
         else if (cell.tag != "Cell") {
@@ -50,13 +50,13 @@ public class InputManager : MonoBehaviour {
         }
         else if (secondCell == null && firstCell != cell) {
             secondCell = cell;
-            BoardManager.inst.TakeInput(GetIndexInParent(firstCell.transform), GetIndexInParent(secondCell.transform));
+            Client.SendInputToServer(GetIndexInParent(firstCell.transform), GetIndexInParent(secondCell.transform));
             //Debug.Log("Swapping: " + firstCell.transform.name + " with " + secondCell.transform.name);
         }
         firstCell = null;
         secondCell = null;
     }
-    public int GetIndexInParent(Transform trans) {
+    private int GetIndexInParent(Transform trans) {
         for (int i = 0; i < trans.parent.childCount; i++) {
             if (trans.parent.GetChild(i) == trans) {
                 return i;

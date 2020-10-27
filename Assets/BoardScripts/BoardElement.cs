@@ -1,38 +1,35 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
+﻿using System.Collections.Generic;
+using System.Numerics;
 
 public class BoardElement {
 
     public enum BoardElementTypes { Default, Cash, Cross, Bomb, Bell }
 
-    protected GameObject attachedGameobject = null;
     protected System.Type thisType = typeof(BoardElement);
-    private int[] transformIndex;
+    private int[] transformIndexInHierarchy;
     private int[] imageTransformIndex;
     private int[] highlightImageTransformIndex;
-    protected Color colorValue = Color.black;
+    protected Vector4 colorValue = new Vector4(0, 0, 0, 0);
 
     protected int elementSpriteIndexInArray = -1;
 
     protected bool hasBeenDestroyed = false;
-    public BoardElement(GameObject gameobjectToAttach, int[] indexInParent, Color colorValue) {
+    public BoardElement(int[] indexInParent, Vector4 colorValue) {
         thisType = typeof(BoardElement);
-        attachedGameobject = gameobjectToAttach;
-        transformIndex = indexInParent;
-        imageTransformIndex = new int[transformIndex.Length + 1];
-        transformIndex.CopyTo(imageTransformIndex, 0);
+        transformIndexInHierarchy = indexInParent;
+        imageTransformIndex = new int[transformIndexInHierarchy.Length + 1];
+        transformIndexInHierarchy.CopyTo(imageTransformIndex, 0);
         imageTransformIndex[imageTransformIndex.Length - 1] = 0;
-        highlightImageTransformIndex = new int[transformIndex.Length + 1];
-        transformIndex.CopyTo(highlightImageTransformIndex, 0);
+        highlightImageTransformIndex = new int[transformIndexInHierarchy.Length + 1];
+        transformIndexInHierarchy.CopyTo(highlightImageTransformIndex, 0);
         highlightImageTransformIndex[highlightImageTransformIndex.Length - 1] = 1;
         this.colorValue = colorValue;
-        elementSpriteIndexInArray = (int) FixedElementData.AvailableSprites.defaultElement;
+        elementSpriteIndexInArray = (int) ConstantValues.AvailableSprites.defaultElement;
 
     }
 
     public int[] GetTransformIndex() {
-        return transformIndex;
+        return transformIndexInHierarchy;
     }
     public int[] GetImageTransformIndex() {
         return imageTransformIndex;
@@ -44,7 +41,7 @@ public class BoardElement {
     /// Should called when the cell's element's value is changed
     /// </summary>
     /// <param name="newValue">The new color value of the element to set</param>
-    public virtual void OnElementAppearance(Color newValue) {
+    public virtual void OnElementAppearance(Vector4 newValue) {
         hasBeenDestroyed = false;
         this.colorValue = newValue;
     }
@@ -57,15 +54,12 @@ public class BoardElement {
         hasBeenDestroyed = true;
         return false;
     }
-    public Color GetElementValue() {
+    public Vector4 GetElementValue() {
         return this.colorValue;
     }
 
     public System.Type GetElementClassType() {
         return thisType;
-    }
-    public GameObject GetAttachedGameObject() {
-        return attachedGameobject;
     }
     public int GetElementSpriteIndex() {
         return elementSpriteIndexInArray;
@@ -76,14 +70,14 @@ public class CashBoardElement : BoardElement {
 
     private float cashValue = 0;
 
-    public CashBoardElement(GameObject gameObjectToAttach, int[] indexInParent, int cashElementTypeIndex):
-        base(gameObjectToAttach, indexInParent, Color.white) {
-            base.elementSpriteIndexInArray = (int) FixedElementData.AvailableSprites.cashWhite + cashElementTypeIndex;
+    public CashBoardElement(int[] indexInParent, int cashElementTypeIndex):
+        base(indexInParent, Vector4.One) {
+            base.elementSpriteIndexInArray = (int) ConstantValues.AvailableSprites.cashWhite + cashElementTypeIndex;
             base.thisType = typeof(CashBoardElement);
-            this.cashValue = FixedElementData.cashElementsValues[cashElementTypeIndex] * MoneyManager.GetSwapCost() * 100;
+            this.cashValue = ConstantValues.cashElementsValues[cashElementTypeIndex] * MoneyManager.GetSwapCost() * 100;
         }
 
-    public override void OnElementAppearance(Color newValue) {
+    public override void OnElementAppearance(Vector4 newValue) {
         hasBeenDestroyed = false;
     }
     public override bool OnElementDestruction(BoardManager board) {
@@ -103,14 +97,14 @@ public class CashBoardElement : BoardElement {
 
 public class CrossBoardElement : BoardElement {
 
-    public CrossBoardElement(GameObject gameObjectToAttach, int[] indexInParent, Color colorValue):
-        base(gameObjectToAttach, indexInParent, colorValue) {
+    public CrossBoardElement(int[] indexInParent, Vector4 colorValue):
+        base(indexInParent, colorValue) {
 
-            base.elementSpriteIndexInArray = (int) FixedElementData.AvailableSprites.cross;
+            base.elementSpriteIndexInArray = (int) ConstantValues.AvailableSprites.cross;
             base.thisType = typeof(CrossBoardElement);
         }
 
-    public override void OnElementAppearance(Color newValue) {
+    public override void OnElementAppearance(Vector4 newValue) {
         this.colorValue = newValue;
         hasBeenDestroyed = false;
     }
@@ -127,21 +121,22 @@ public class CrossBoardElement : BoardElement {
 
     }
 }
+
 public class BombBoardElement : BoardElement {
 
     public enum BombExplosionStyle { NormalStyle, CrossStyle, DoubleBombStyle }
 
     private BombExplosionStyle thisBombStyle = BombExplosionStyle.NormalStyle;
 
-    public BombBoardElement(GameObject gameObjectToAttach, int[] indexInParent):
-        base(gameObjectToAttach, indexInParent, Color.white) {
-            base.elementSpriteIndexInArray = (int) FixedElementData.AvailableSprites.bomb;
+    public BombBoardElement(int[] indexInParent):
+        base(indexInParent, Vector4.One) {
+            base.elementSpriteIndexInArray = (int) ConstantValues.AvailableSprites.bomb;
             base.thisType = typeof(BombBoardElement);
-            base.colorValue = Color.white;
+            base.colorValue = Vector4.One;
         }
 
-    public override void OnElementAppearance(Color newValue) {
-        base.colorValue = Color.white;
+    public override void OnElementAppearance(Vector4 newValue) {
+        base.colorValue = Vector4.One;
         hasBeenDestroyed = false;
     }
 
@@ -175,15 +170,15 @@ public class BombBoardElement : BoardElement {
 }
 public class BellBoardElement : BoardElement {
 
-    public BellBoardElement(GameObject gameObjectToAttach, int[] indexInParent):
-        base(gameObjectToAttach, indexInParent, Color.white) {
+    public BellBoardElement(int[] indexInParent):
+        base(indexInParent, Vector4.One) {
 
-            base.elementSpriteIndexInArray = (int) FixedElementData.AvailableSprites.bell;
+            base.elementSpriteIndexInArray = (int) ConstantValues.AvailableSprites.bell;
             base.thisType = typeof(BellBoardElement);
         }
 
-    public override void OnElementAppearance(Color newValue) {
-        base.colorValue = Color.white;
+    public override void OnElementAppearance(Vector4 newValue) {
+        base.colorValue = Vector4.One;
         hasBeenDestroyed = false;
     }
 
@@ -191,9 +186,9 @@ public class BellBoardElement : BoardElement {
         if (hasBeenDestroyed) {
             return false;
         }
-        if (otherElement == null) {
-            Debug.LogError(GetAttachedGameObject().name + " Bell OnElementDestruction() triggered with null as gameobject");
-        }
+        // if (otherElement == null) {
+        //     Debug.LogError(BoardFunctions.GetTransformByIndex(otherElement.GetTransformIndex()) + " Bell OnElementDestruction() triggered with null as gameobject");
+        // }
         KeyValuePair<int, int> pos = BoardFunctions.GetBoardPositionOfElement(this, board.elementsPositions);
         BoardFunctions.ActivateBellFunction(board, otherElement);
         board.matchedElemPositions[pos.Key, pos.Value] = true;

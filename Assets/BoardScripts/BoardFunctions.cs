@@ -1,10 +1,11 @@
 ﻿    using System.Collections.Generic;
-    using UnityEngine;
+    using System.Numerics;
+    using System;
+    //using UnityEngine;
 
     public static class BoardFunctions {
 
-        /// <summary> Possible values of cells</summary>
-        public static Color[] availColors = { Color.red, Color.blue, Color.green, Color.cyan, Color.magenta };
+        static System.Random random = new System.Random();
 
         /// <summary>Returns the position of the element on the board</summary>
         public static KeyValuePair<int, int> GetBoardPositionOfElement(BoardElement element, BoardElement[, ] positions) {
@@ -15,7 +16,7 @@
                     }
                 }
             }
-            Debug.LogError("Could not find element: " + element.GetAttachedGameObject().name + " on board!");
+            //Debug.LogError("Could not find element: " + GetTransformByIndex(element.GetTransformIndex()) + " on board!");
             return new KeyValuePair<int, int>();
         }
 
@@ -32,7 +33,7 @@
             //Debug.Log(newElementPosition.Key + ", " + newElementPosition.Value + " set to position " + oldElementPosition.Key + ", " + oldElementPosition.Value);
             //Debug.Log(oldElementPosition.Key + ", " + oldElementPosition.Value + " set to position " + newElementPosition.Key + ", " + newElementPosition.Value);
             if (positions[oldElementPosition.Key, oldElementPosition.Value] == positions[newElementPosition.Key, newElementPosition.Value]) {
-                Debug.LogError("Swap was not correct");
+                UnityEngine.Debug.LogError("Swap was not correct");
             }
 #endif
         }
@@ -48,29 +49,27 @@
         /// <returns>Returns if should check</returns>
         public static void SwapElements(BoardElement firstElement, BoardElement secondElement, BoardManager board, bool rewire = false, float speed = -1) {
             if (speed == -1) {
-                speed = board.GetSwappingSpeed();
+                speed = ConstantValues.swappingSpeed;
             }
             KeyValuePair<int, int> firstElementPosOnBoard = GetBoardPositionOfElement(firstElement, board.elementsPositions);
             KeyValuePair<int, int> secondElementPosOnBoard = GetBoardPositionOfElement(secondElement, board.elementsPositions);
 
-            Vector3 targetPos = board.positionsOnWorld[secondElementPosOnBoard.Key, secondElementPosOnBoard.Value];
             board.currentMessageID += 1;
-            board.messagesToClient.Add(new Messages.AnimationMessage(board.currentMessageID, -1, Messages.AnimationMessage.AnimationMessageTypes.MoveTo, firstElement.GetTransformIndex(), speed, targetPos.x, targetPos.y, targetPos.z));
+            board.messagesToClient.Add(new Messages.AnimationMessage(board.currentMessageID, -1, Messages.AnimationMessage.AnimationMessageTypes.MoveTo, firstElement.GetTransformIndex(), speed, secondElementPosOnBoard.Key, secondElementPosOnBoard.Value));
 
-            targetPos = board.positionsOnWorld[firstElementPosOnBoard.Key, firstElementPosOnBoard.Value];
             board.currentMessageID += 1;
-            board.messagesToClient.Add(new Messages.AnimationMessage(board.currentMessageID, -1, Messages.AnimationMessage.AnimationMessageTypes.MoveTo, secondElement.GetTransformIndex(), speed, targetPos.x, targetPos.y, targetPos.z));
+            board.messagesToClient.Add(new Messages.AnimationMessage(board.currentMessageID, -1, Messages.AnimationMessage.AnimationMessageTypes.MoveTo, secondElement.GetTransformIndex(), speed, firstElementPosOnBoard.Key, firstElementPosOnBoard.Value));
 
             if (!rewire) {
                 BoardFunctions.SwapBoardElementNeighbours(firstElement, secondElement, ref board.elementsPositions);
             }
             else {
-                targetPos = board.positionsOnWorld[firstElementPosOnBoard.Key, firstElementPosOnBoard.Value];
+
                 board.currentMessageID += 1;
-                board.messagesToClient.Add(new Messages.AnimationMessage(board.currentMessageID, board.currentMessageID - 2, Messages.AnimationMessage.AnimationMessageTypes.MoveTo, firstElement.GetTransformIndex(), speed, targetPos.x, targetPos.y, targetPos.z));
-                targetPos = board.positionsOnWorld[secondElementPosOnBoard.Key, secondElementPosOnBoard.Value];
+                board.messagesToClient.Add(new Messages.AnimationMessage(board.currentMessageID, board.currentMessageID - 2, Messages.AnimationMessage.AnimationMessageTypes.MoveTo, firstElement.GetTransformIndex(), speed, firstElementPosOnBoard.Key, firstElementPosOnBoard.Value));
                 board.currentMessageID += 1;
-                board.messagesToClient.Add(new Messages.AnimationMessage(board.currentMessageID, board.currentMessageID - 2, Messages.AnimationMessage.AnimationMessageTypes.MoveTo, secondElement.GetTransformIndex(), speed, targetPos.x, targetPos.y, targetPos.z));
+                board.messagesToClient.Add(new Messages.AnimationMessage(board.currentMessageID, board.currentMessageID - 2, Messages.AnimationMessage.AnimationMessageTypes.MoveTo, secondElement.GetTransformIndex(), speed, secondElementPosOnBoard.Key, secondElementPosOnBoard.Value));
+
             }
 
         }
@@ -80,7 +79,7 @@
             int numberOfElem = 0;
 
             if (row - 1 > -1) {
-                if (positions[collum, row - 1].GetElementValue() == Color.white) {
+                if (positions[collum, row - 1].GetElementClassType() != typeof(BoardElement) && positions[collum, row - 1].GetElementClassType() != typeof(CrossBoardElement)) {
                     return 0;
                 }
                 if (positions[collum, row].GetElementValue() == positions[collum, row - 1].GetElementValue()) {
@@ -95,7 +94,7 @@
             int numberOfElem = 0;
 
             if (row + 1 < rowsNumbers) {
-                if (positions[collum, row + 1].GetElementValue() == Color.white) {
+                if (positions[collum, row + 1].GetElementClassType() != typeof(BoardElement) && positions[collum, row + 1].GetElementClassType() != typeof(CrossBoardElement)) {
                     return 0;
                 }
                 if (positions[collum, row].GetElementValue() == positions[collum, row + 1].GetElementValue()) {
@@ -110,7 +109,7 @@
         public static int CheckLeftNeighboursForMatches(int collum, int row, BoardElement[, ] positions) {
             int numberOfElem = 0;
             if (collum - 1 > -1) {
-                if (positions[collum - 1, row].GetElementValue() == Color.white) {
+                if (positions[collum - 1, row].GetElementClassType() != typeof(BoardElement) && positions[collum - 1, row].GetElementClassType() != typeof(CrossBoardElement)) {
                     return 0;
                 }
                 if (positions[collum, row].GetElementValue() == positions[collum - 1, row].GetElementValue()) {
@@ -124,7 +123,7 @@
         public static int CheckRightNeighboursForMatches(int collum, int row, BoardElement[, ] positions, int collumsNumber) {
             int numberOfElem = 0;
             if (collum + 1 < collumsNumber) {
-                if (positions[collum + 1, row].GetElementValue() == Color.white) {
+                if (positions[collum + 1, row].GetElementClassType() != typeof(BoardElement) && positions[collum + 1, row].GetElementClassType() != typeof(CrossBoardElement)) {
                     return 0;
                 }
                 if (positions[collum, row].GetElementValue() == positions[collum + 1, row].GetElementValue()) {
@@ -157,10 +156,10 @@
                         // AlexDebugger.GetInstance().AddMessage(positions[startCollum, row].GetAttachedGameObject().name + "is an " + ((row < startRow) ? " on top" : "on bottom") + " match of " + positions[startCollum, row].GetAttachedGameObject().name, AlexDebugger.tags.Matches);
                     }
                     if (upperMatches > 0) {
-                        AlexDebugger.GetInstance().AddMessage("Upper matches for element: " + positions[startCollum, startRow].GetAttachedGameObject().name + " are: " + upperMatches, AlexDebugger.tags.Matches);
+                        //AlexDebugger.GetInstance().AddMessage("Upper matches for element: " + GetTransformByIndex(positions[startCollum, startRow].GetTransformIndex()) + " are: " + upperMatches, AlexDebugger.tags.Matches);
                     }
                     if (bottomMatches > 0) {
-                        AlexDebugger.GetInstance().AddMessage("Bottom matches for element: " + positions[startCollum, startRow].GetAttachedGameObject().name + " are: " + bottomMatches, AlexDebugger.tags.Matches);
+                        //AlexDebugger.GetInstance().AddMessage("Bottom matches for element: " + GetTransformByIndex(positions[startCollum, startRow].GetTransformIndex()) + " are: " + bottomMatches, AlexDebugger.tags.Matches);
                     }
                 }
                 // if more than 2 element matches, add horizontal mathced elements
@@ -170,14 +169,14 @@
                         matchedElemPositions[collum, startRow] = true;
                     }
                     if (leftMatches > 0) {
-                        AlexDebugger.GetInstance().AddMessage("Left matches for element: " + positions[startCollum, startRow].GetAttachedGameObject().name + " are: " + leftMatches, AlexDebugger.tags.Matches);
+                        //AlexDebugger.GetInstance().AddMessage("Left matches for element: " + GetTransformByIndex(positions[startCollum, startRow].GetTransformIndex()) + " are: " + leftMatches, AlexDebugger.tags.Matches);
                     }
                     if (rightMatches > 0) {
-                        AlexDebugger.GetInstance().AddMessage("Bottom matches for element: " + positions[startCollum, startRow].GetAttachedGameObject().name + " are: " + rightMatches, AlexDebugger.tags.Matches);
+                        //AlexDebugger.GetInstance().AddMessage("Bottom matches for element: " + GetTransformByIndex(positions[startCollum, startRow].GetTransformIndex()) + " are: " + rightMatches, AlexDebugger.tags.Matches);
                     }
                 }
                 if (upperMatches + bottomMatches >= 2 || leftMatches + rightMatches >= 2) {
-                    AlexDebugger.GetInstance().AddMessage("Total matches found for: " + positions[startCollum, startRow].GetAttachedGameObject().name + " are: " + (upperMatches + bottomMatches + leftMatches + rightMatches).ToString(), AlexDebugger.tags.Matches);
+                    //AlexDebugger.GetInstance().AddMessage("Total matches found for: " + GetTransformByIndex(positions[startCollum, startRow].GetTransformIndex()) + " are: " + (upperMatches + bottomMatches + leftMatches + rightMatches).ToString(), AlexDebugger.tags.Matches);
                 }
             }
             if (upperMatches + bottomMatches >= 2 || leftMatches + rightMatches >= 2) {
@@ -206,12 +205,13 @@
             }
             for (int i = row - 1; i > -1; i--) {
                 // if non-matched element found above, swap
-                if (board.matchedElemPositions[collum, i] == false && board.positionsDestroyed[collum, i] == false && destroyedElementsInRow.Count > 0) {
+                if (board.matchedElemPositions[collum, i] == false && destroyedElementsInRow.Count > 0) {
                     //AlexDebugger.GetInstance().AddMessage("Swapping " + boardInstance.elementsPositions[collumn, row].GetAttachedGameObject().name + " with " + boardInstance.elementsPositions[collumn, i].GetAttachedGameObject().name + " at position " + collumn + ", " + i, AlexDebugger.tags.UpwardMovement);
 
                     int nextEmptyPosition = destroyedElementsInRow.Dequeue();
-                    BoardFunctions.SwapElements(board.elementsPositions[collum, nextEmptyPosition], board.elementsPositions[collum, i], board, false, board.GetSwappingSpeed() * 2.5f);
+                    BoardFunctions.SwapElements(board.elementsPositions[collum, nextEmptyPosition], board.elementsPositions[collum, i], board, false, ConstantValues.swappingSpeed * 2.5f);
                     board.matchedElemPositions[collum, nextEmptyPosition] = false;
+                    board.changedPotitions[collum, nextEmptyPosition] = true;
                     board.matchedElemPositions[collum, i] = true;
                     destroyedElementsInRow.Enqueue(i);
                     didSwapOccur = true;
@@ -222,11 +222,6 @@
                 }
             }
 
-            while (destroyedElementsInRow.Count > 0) {
-                int index = destroyedElementsInRow.Dequeue();
-                board.matchedElemPositions[collum, index] = false;
-                board.positionsDestroyed[collum, index] = true;
-            }
             return didSwapOccur;
 
         }
@@ -258,7 +253,6 @@
             //CheckIfElementAtPositionIsNull(collum, row, board.elementsPositions);
 
             //AlexDebugger.GetInstance().AddMessage("Replacing " + board.elementsPositions[collum, row], AlexDebugger.tags.Effects);
-            Vector3 originalPos = board.positionsOnWorld[collum, row];
 
 #region Score check
 
@@ -315,11 +309,11 @@
             board.currentMessageID += 1;
             board.messagesToClient.Add(new Messages.AnimationMessage(board.currentMessageID, -1, Messages.AnimationMessage.AnimationMessageTypes.ChangeSprite, board.elementsPositions[collum, row].GetImageTransformIndex(), board.elementsPositions[collum, row].GetElementSpriteIndex(), board.elementsPositions[collum, row].GetElementValue()));
             board.currentMessageID += 1;
-            board.messagesToClient.Add(new Messages.AnimationMessage(board.currentMessageID, -1, Messages.AnimationMessage.AnimationMessageTypes.MoveTo, board.elementsPositions[collum, row].GetTransformIndex(), 100000, board.holders[collum].anchoredPosition.x, board.holders[collum].anchoredPosition.y + 200, 0));
+            board.messagesToClient.Add(new Messages.AnimationMessage(board.currentMessageID, -1, Messages.AnimationMessage.AnimationMessageTypes.MoveToHolder, board.elementsPositions[collum, row].GetTransformIndex(), 100000, collum, 0));
             board.currentMessageID += 1;
             board.messagesToClient.Add(new Messages.AnimationMessage(board.currentMessageID, board.currentMessageID - 1, Messages.AnimationMessage.AnimationMessageTypes.Scale, board.elementsPositions[collum, row].GetTransformIndex(), 100000, 1, 1, 1));
             board.currentMessageID += 1;
-            board.messagesToClient.Add(new Messages.AnimationMessage(board.currentMessageID, board.currentMessageID - 1, Messages.AnimationMessage.AnimationMessageTypes.MoveTo, board.elementsPositions[collum, row].GetTransformIndex(), board.GetSwappingSpeed() * 2.5f, originalPos.x, originalPos.y, originalPos.z));
+            board.messagesToClient.Add(new Messages.AnimationMessage(board.currentMessageID, board.currentMessageID - 1, Messages.AnimationMessage.AnimationMessageTypes.MoveTo, board.elementsPositions[collum, row].GetTransformIndex(), ConstantValues.swappingSpeed * 2.5f, collum, row));
 
             return;
 
@@ -329,87 +323,43 @@
         public static void PlayMatchEffectAnimations(int collum, int row, BoardManager board) {
             //AlexDebugger.GetInstance().AddMessage("####### Scale to zero effect for " + positions[collum, row].GetAttachedGameObject().name, AlexDebugger.tags.Effects);
             board.currentMessageID += 1;
-            board.messagesToClient.Add(new Messages.AnimationMessage(board.currentMessageID, -1, Messages.AnimationMessage.AnimationMessageTypes.Scale, board.elementsPositions[collum, row].GetTransformIndex(), board.GetSwappingSpeed(), 0, 0, 0));
-        }
-
-        /// <summary>Checks each element on the board for matches and flags them</summary>
-        public static int CheckBoardForMatches(BoardElement[, ] positions, ref bool[, ] matchedElemPositions, int collumsNumber, int rowsNumber) {
-            AlexDebugger.GetInstance().AddMessage("Checking board for new matches...", AlexDebugger.tags.Aftermatch);
-            int totalMatches = 0;
-            // Search for matches and flag them
-            for (int row = 0; row < positions.GetLength(1); row++) {
-                for (int collum = 0; collum < positions.GetLength(0); collum++) {
-                    if (matchedElemPositions[collum, row] == true) {
-                        continue;
-                    }
-                    totalMatches += CheckElementForMatches(collum, row, positions, ref matchedElemPositions, collumsNumber, rowsNumber, true);
-                    // case of cash element has reached bottom
-                    if (row == positions.GetLength(1) - 1 && positions[collum, row].GetElementClassType() == typeof(CashBoardElement)) {
-                        matchedElemPositions[collum, row] = true;
-                        AlexDebugger.GetInstance().AddMessage("A cash element has reached bottom at position: " + collum + ", " + row, AlexDebugger.tags.Aftermatch);
-                        totalMatches++;
-                    }
-
-                }
-
-            }
-            return totalMatches;
-
+            board.messagesToClient.Add(new Messages.AnimationMessage(board.currentMessageID, -1, Messages.AnimationMessage.AnimationMessageTypes.Scale, board.elementsPositions[collum, row].GetTransformIndex(), ConstantValues.scaleToZeroAnimationSpeed, 0, 0, 0));
         }
 
         /// <summary>Check if with input it can create matches. Returns best score found </summary>
         public static int IsPotentialInput(int collum, int row, BoardElement[, ] positions, bool[, ] matchedElemPositions, int totalCollums, int totalRows) {
             int possibleScore = 0;
-            if (row - 1 > -1) {
+            if (row - 1 > -1 && positions[collum, row - 1].GetElementClassType() != typeof(CashBoardElement)) {
                 BoardFunctions.SwapBoardElementNeighbours(positions[collum, row], positions[collum, row - 1], ref positions);
                 int matches = BoardFunctions.CheckElementForMatches(collum, row - 1, positions, ref matchedElemPositions, totalCollums, totalRows, false);
                 if (matches > 0) {
-                    BoardFunctions.SwapBoardElementNeighbours(positions[collum, row], positions[collum, row - 1], ref positions);
                     possibleScore = matches;
                 }
-                else {
-                    BoardFunctions.SwapBoardElementNeighbours(positions[collum, row], positions[collum, row - 1], ref positions);
-                }
+                BoardFunctions.SwapBoardElementNeighbours(positions[collum, row], positions[collum, row - 1], ref positions);
             }
-            if (row + 1 < totalRows) {
+            if (row + 1 < totalRows && positions[collum, row + 1].GetElementClassType() != typeof(CashBoardElement)) {
                 BoardFunctions.SwapBoardElementNeighbours(positions[collum, row], positions[collum, row + 1], ref positions);
                 int matches = BoardFunctions.CheckElementForMatches(collum, row + 1, positions, ref matchedElemPositions, totalCollums, totalRows, false);
-                if (matches > 0) {
-                    BoardFunctions.SwapBoardElementNeighbours(positions[collum, row], positions[collum, row + 1], ref positions);
-                    if (possibleScore < matches) {
-                        possibleScore = matches;
-                    }
-
+                if (matches > 0 && possibleScore < matches) {
+                    possibleScore = matches;
                 }
-                else {
-                    BoardFunctions.SwapBoardElementNeighbours(positions[collum, row], positions[collum, row + 1], ref positions);
-                }
+                BoardFunctions.SwapBoardElementNeighbours(positions[collum, row], positions[collum, row + 1], ref positions);
             }
-            if (collum - 1 > -1) {
+            if (collum - 1 > -1 && positions[collum - 1, row].GetElementClassType() != typeof(CashBoardElement)) {
                 BoardFunctions.SwapBoardElementNeighbours(positions[collum, row], positions[collum - 1, row], ref positions);
                 int matches = BoardFunctions.CheckElementForMatches(collum - 1, row, positions, ref matchedElemPositions, totalCollums, totalRows, false);
-                if (matches > 0) {
-                    BoardFunctions.SwapBoardElementNeighbours(positions[collum, row], positions[collum - 1, row], ref positions);
-                    if (possibleScore < matches) {
-                        possibleScore = matches;
-                    }
+                if (matches > 0 && possibleScore < matches) {
+                    possibleScore = matches;
                 }
-                else {
-                    BoardFunctions.SwapBoardElementNeighbours(positions[collum, row], positions[collum - 1, row], ref positions);
-                }
+                BoardFunctions.SwapBoardElementNeighbours(positions[collum, row], positions[collum - 1, row], ref positions);
             }
-            if (collum + 1 < totalCollums) {
+            if (collum + 1 < totalCollums && positions[collum + 1, row].GetElementClassType() != typeof(CashBoardElement)) {
                 BoardFunctions.SwapBoardElementNeighbours(positions[collum, row], positions[collum + 1, row], ref positions);
                 int matches = BoardFunctions.CheckElementForMatches(collum + 1, row, positions, ref matchedElemPositions, totalCollums, totalRows, false);
-                if (matches > 0) {
-                    BoardFunctions.SwapBoardElementNeighbours(positions[collum, row], positions[collum + 1, row], ref positions);
-                    if (possibleScore < matches) {
-                        possibleScore = matches;
-                    }
+                if (matches > 0 && possibleScore < matches) {
+                    possibleScore = matches;
                 }
-                else {
-                    BoardFunctions.SwapBoardElementNeighbours(positions[collum, row], positions[collum + 1, row], ref positions);
-                }
+                BoardFunctions.SwapBoardElementNeighbours(positions[collum, row], positions[collum + 1, row], ref positions);
             }
             return possibleScore;
         }
@@ -445,60 +395,57 @@
             }
         }
         /// <summary> Get a color that does not exceeds max score allowed </summary>
-        public static Color GetColorInScore(int collum, int row, ref BoardElement[, ] positions, bool[, ] matchedElemPositions, int totalCollums, int totalRows, int maxScoreAllowed, ref int currentScorePossible, bool forceGetMin) {
-            int bestPossibleScoreFound = 0;
-            int bestScoreIndex = UnityEngine.Random.Range(0, GetAvailableColors().Length);
-            int minimumPossibleScoreFound = 10000000;
-            int minimumScoreIndex = UnityEngine.Random.Range(0, GetAvailableColors().Length);
-            int startingIndex = UnityEngine.Random.Range(0, GetAvailableColors().Length);
+        // public static Color GetColorInScore(int collum, int row, ref BoardElement[, ] positions, bool[, ] matchedElemPositions, int totalCollums, int totalRows, int maxScoreAllowed, ref int currentScorePossible, bool forceGetMin) {
+        //     int bestPossibleScoreFound = 0;
+        //     int bestScoreIndex = UnityEngine.Random.Range(0, GetAvailableColors().Length);
+        //     int minimumPossibleScoreFound = 10000000;
+        //     int minimumScoreIndex = UnityEngine.Random.Range(0, GetAvailableColors().Length);
+        //     int startingIndex = UnityEngine.Random.Range(0, GetAvailableColors().Length);
 
-            for (int i = startingIndex; i < GetAvailableColors().Length + startingIndex; i++) {
-                int index = i;
-                if (index >= GetAvailableColors().Length) {
-                    index = i - GetAvailableColors().Length;
-                }
-                Color originalColor = positions[collum, row].GetElementValue();
-                if (index >= GetAvailableColors().Length || index < 0) {
-                    Debug.LogError("Index out of range. StartingIndex: " + startingIndex + ", currentIndex: " + index);
-                }
-                positions[collum, row].OnElementAppearance(GetAvailableColors() [index]);
+        //     for (int i = startingIndex; i < GetAvailableColors().Length + startingIndex; i++) {
+        //         int index = i;
+        //         if (index >= GetAvailableColors().Length) {
+        //             index = i - GetAvailableColors().Length;
+        //         }
+        //         Color originalColor = positions[collum, row].GetElementValue();
+        //         if (index >= GetAvailableColors().Length || index < 0) {
+        //             Debug.LogError("Index out of range. StartingIndex: " + startingIndex + ", currentIndex: " + index);
+        //         }
+        //         positions[collum, row].OnElementAppearance(GetAvailableColors() [index]);
 
-                int potentialScore = IsPotentialInput(collum, row, positions, matchedElemPositions, totalCollums, totalRows);
-                //Debug.Log("### Potential score: " + potentialScore);
-                positions[collum, row].OnElementAppearance(originalColor);
-                if (potentialScore <= maxScoreAllowed && potentialScore > bestPossibleScoreFound) {
-                    bestPossibleScoreFound = potentialScore;
-                    bestScoreIndex = index;
-                }
-                else if (minimumPossibleScoreFound > potentialScore) {
-                    minimumScoreIndex = index;
-                    minimumPossibleScoreFound = potentialScore;
-                }
-            }
-            if (bestPossibleScoreFound > 0 && !forceGetMin) {
-                //Debug.Log("### SCORE ### Best score found: " + bestPossibleScoreFound + " for element " + positions[collum, row].GetAttachedGameObject().transform.parent.GetChild(bestScoreIndex));
-                currentScorePossible = bestPossibleScoreFound;
-                return GetAvailableColors() [bestScoreIndex];
-            }
-            else {
-                //Debug.Log("### SCORE ### Worst score found: " + minimumPossibleScoreFound + " for element " + positions[collum, row].GetAttachedGameObject().transform.parent.GetChild(bestScoreIndex));
-                currentScorePossible = minimumPossibleScoreFound;
-                return GetAvailableColors() [minimumScoreIndex];
-            }
-        }
+        //         int potentialScore = IsPotentialInput(collum, row, positions, matchedElemPositions, totalCollums, totalRows);
+        //         //Debug.Log("### Potential score: " + potentialScore);
+        //         positions[collum, row].OnElementAppearance(originalColor);
+        //         if (potentialScore <= maxScoreAllowed && potentialScore > bestPossibleScoreFound) {
+        //             bestPossibleScoreFound = potentialScore;
+        //             bestScoreIndex = index;
+        //         }
+        //         else if (minimumPossibleScoreFound > potentialScore) {
+        //             minimumScoreIndex = index;
+        //             minimumPossibleScoreFound = potentialScore;
+        //         }
+        //     }
+        //     if (bestPossibleScoreFound > 0 && !forceGetMin) {
+        //         //Debug.Log("### SCORE ### Best score found: " + bestPossibleScoreFound + " for element " + positions[collum, row].GetAttachedGameObject().transform.parent.GetChild(bestScoreIndex));
+        //         currentScorePossible = bestPossibleScoreFound;
+        //         return GetAvailableColors() [bestScoreIndex];
+        //     }
+        //     else {
+        //         //Debug.Log("### SCORE ### Worst score found: " + minimumPossibleScoreFound + " for element " + positions[collum, row].GetAttachedGameObject().transform.parent.GetChild(bestScoreIndex));
+        //         currentScorePossible = minimumPossibleScoreFound;
+        //         return GetAvailableColors() [minimumScoreIndex];
+        //     }
+        // }
 
-        public static Color[] GetAvailableColors() {
-            return availColors;
-        }
         /// <summary> Highlights a cell by enabling the panel of it's child. Used to visualize correct input </summary>
         public static void ToggleHighlightCell(int collum, int row, BoardManager board, bool shouldHighlight) {
 
             board.currentMessageID += 1;
             if (shouldHighlight) {
-                board.messagesToClient.Add(new Messages.AnimationMessage(board.currentMessageID, -1, Messages.AnimationMessage.AnimationMessageTypes.ChangeSprite, board.elementsPositions[collum, row].GetHighlightImageTransformIndex(), (int) FixedElementData.AvailableSprites.highlight));
+                board.messagesToClient.Add(new Messages.AnimationMessage(board.currentMessageID, -1, Messages.AnimationMessage.AnimationMessageTypes.ChangeSprite, board.elementsPositions[collum, row].GetHighlightImageTransformIndex(), (int) ConstantValues.AvailableSprites.highlight));
             }
             else {
-                board.messagesToClient.Add(new Messages.AnimationMessage(board.currentMessageID, -1, Messages.AnimationMessage.AnimationMessageTypes.ChangeSprite, board.elementsPositions[collum, row].GetHighlightImageTransformIndex(), (int) FixedElementData.AvailableSprites.transparent));
+                board.messagesToClient.Add(new Messages.AnimationMessage(board.currentMessageID, -1, Messages.AnimationMessage.AnimationMessageTypes.ChangeSprite, board.elementsPositions[collum, row].GetHighlightImageTransformIndex(), (int) ConstantValues.AvailableSprites.transparent));
             }
         }
 
@@ -510,25 +457,26 @@
                     }
                 }
             }
-            Debug.LogError("Could not find element with parent index: " + index);
+            UnityEngine.Debug.LogError("Could not find element with parent index: " + index);
             return null;
         }
 
         public static BoardElement CreateNewElement(BoardElement previousElement, BoardElement.BoardElementTypes type) {
-            Color newColor = BoardFunctions.availColors[Random.Range(0, BoardFunctions.availColors.Length)];
+            int randomNum = random.Next(0, ConstantValues.GetAvailableColors().Length);
+            Vector4 newColor = ConstantValues.GetAvailableColors() [randomNum];
             switch (type) {
                 case BoardElement.BoardElementTypes.Cross:
-                    previousElement = new CrossBoardElement(previousElement.GetAttachedGameObject(), previousElement.GetTransformIndex(), previousElement.GetElementValue());
+                    previousElement = new CrossBoardElement(previousElement.GetTransformIndex(), previousElement.GetElementValue());
                     break;
                 case BoardElement.BoardElementTypes.Bomb:
-                    previousElement = new BombBoardElement(previousElement.GetAttachedGameObject(), previousElement.GetTransformIndex());
+                    previousElement = new BombBoardElement(previousElement.GetTransformIndex());
                     break;
                 case BoardElement.BoardElementTypes.Bell:
-                    previousElement = new BellBoardElement(previousElement.GetAttachedGameObject(), previousElement.GetTransformIndex());
+                    previousElement = new BellBoardElement(previousElement.GetTransformIndex());
                     break;
                 case BoardElement.BoardElementTypes.Default:
                     if (previousElement.GetElementClassType() != typeof(BoardElement)) {
-                        previousElement = new BoardElement(previousElement.GetAttachedGameObject(), previousElement.GetTransformIndex(), newColor);
+                        previousElement = new BoardElement(previousElement.GetTransformIndex(), newColor);
                     }
                     else {
                         previousElement.OnElementAppearance(newColor);
@@ -539,13 +487,13 @@
             return previousElement;
         }
         public static BoardElement CreateNewCashElement(BoardElement previousElement, int cashTypeIndex) {
-            previousElement = new CashBoardElement(previousElement.GetAttachedGameObject(), previousElement.GetTransformIndex(), cashTypeIndex);
+            previousElement = new CashBoardElement(previousElement.GetTransformIndex(), cashTypeIndex);
             return previousElement;
 
         }
 
         public static bool DestroyBoardElement(int collum, int row, BoardManager board, BoardElement lastElementProccesed) {
-            AlexDebugger.GetInstance().AddMessage("Element: " + board.elementsPositions[collum, row].GetAttachedGameObject().transform.name + "  was a match of color: " + board.elementsPositions[collum, row].GetElementValue().ToString() + ", de-activating highlight.", AlexDebugger.tags.Step2);
+            //AlexDebugger.GetInstance().AddMessage("Element: " + GetTransformByIndex(board.elementsPositions[collum, row].GetTransformIndex()) + "  was a match of color: " + board.elementsPositions[collum, row].GetElementValue().ToString() + ", de-activating highlight.", AlexDebugger.tags.Step2);
             if (board.elementsPositions[collum, row].GetElementClassType() == typeof(BombBoardElement) || board.elementsPositions[collum, row].GetElementClassType() == typeof(CrossBoardElement)) {
                 if (board.elementsPositions[collum, row].OnElementDestruction(board)) {
                     return true;
@@ -558,7 +506,7 @@
             }
             else if (board.elementsPositions[collum, row].GetElementClassType() == typeof(CashBoardElement)) {
                 board.currentMessageID += 1;
-                board.messagesToClient.Add(new Messages.AnimationMessage(board.currentMessageID, board.currentMessageID - 1, board.elementsPositions[collum, row].GetTransformIndex(), board.elementsPositions[collum, row].GetElementSpriteIndex(), ((CashBoardElement) board.elementsPositions[collum, row]).GetCashValue().ToString()));
+                board.messagesToClient.Add(new Messages.AnimationMessage.ScrollWinHistoryMessage(board.currentMessageID, board.currentMessageID - 1, board.elementsPositions[collum, row].GetTransformIndex(), board.elementsPositions[collum, row].GetElementSpriteIndex(), ((CashBoardElement) board.elementsPositions[collum, row]).GetCashValue().ToString()));
                 if (board.elementsPositions[collum, row].OnElementDestruction(board)) {
                     return true;
                 }
@@ -653,16 +601,16 @@
                     if (secondElement.GetElementClassType() == typeof(BoardElement)) {
                         if (board.elementsPositions[collum, row].GetElementValue() == secondElement.GetElementValue() && board.elementsPositions[collum, row].GetElementClassType() == typeof(BoardElement)) {
                             board.currentMessageID += 1;
-                            board.messagesToClient.Add(new Messages.AnimationMessage(board.currentMessageID, -1, Messages.AnimationMessage.AnimationMessageTypes.ChangeSprite, board.elementsPositions[collum, row].GetImageTransformIndex(), (int) FixedElementData.AvailableSprites.bell, Color.white));
+                            board.messagesToClient.Add(new Messages.AnimationMessage(board.currentMessageID, -1, Messages.AnimationMessage.AnimationMessageTypes.ChangeSprite, board.elementsPositions[collum, row].GetImageTransformIndex(), (int) ConstantValues.AvailableSprites.bell, Vector4.One));
                             board.elementsPositions[collum, row].OnElementDestruction(board);
                             board.matchedElemPositions[collum, row] = true;
                         }
                     }
                     else if (secondElement.GetElementClassType() == typeof(CrossBoardElement)) {
                         if (board.elementsPositions[collum, row].GetElementValue() == secondElement.GetElementValue() && board.elementsPositions[collum, row].GetElementClassType() == typeof(BoardElement)) {
-                            board.elementsPositions[collum, row] = new CrossBoardElement(board.elementsPositions[collum, row].GetAttachedGameObject(), board.elementsPositions[collum, row].GetTransformIndex(), board.elementsPositions[collum, row].GetElementValue());
+                            board.elementsPositions[collum, row] = new CrossBoardElement(board.elementsPositions[collum, row].GetTransformIndex(), board.elementsPositions[collum, row].GetElementValue());
                             board.currentMessageID += 1;
-                            board.messagesToClient.Add(new Messages.AnimationMessage(board.currentMessageID, -1, Messages.AnimationMessage.AnimationMessageTypes.ChangeSprite, board.elementsPositions[collum, row].GetImageTransformIndex(), (int) FixedElementData.AvailableSprites.cross, board.elementsPositions[collum, row].GetElementValue()));
+                            board.messagesToClient.Add(new Messages.AnimationMessage(board.currentMessageID, -1, Messages.AnimationMessage.AnimationMessageTypes.ChangeSprite, board.elementsPositions[collum, row].GetImageTransformIndex(), (int) ConstantValues.AvailableSprites.cross, board.elementsPositions[collum, row].GetElementValue()));
                             board.elementsPositions[collum, row].OnElementDestruction(board);
                             board.matchedElemPositions[collum, row] = true;
                         }
@@ -675,9 +623,9 @@
                     }
                     else if (secondElement.GetElementClassType() == typeof(BellBoardElement)) {
                         board.currentMessageID += 1;
-                        board.messagesToClient.Add(new Messages.AnimationMessage(board.currentMessageID, -1, Messages.AnimationMessage.AnimationMessageTypes.ChangeSprite, board.elementsPositions[collum, row].GetImageTransformIndex(), (int) FixedElementData.AvailableSprites.bell, Color.white));
+                        board.messagesToClient.Add(new Messages.AnimationMessage(board.currentMessageID, -1, Messages.AnimationMessage.AnimationMessageTypes.ChangeSprite, board.elementsPositions[collum, row].GetImageTransformIndex(), (int) ConstantValues.AvailableSprites.bell, Vector4.One));
                         if (board.elementsPositions[collum, row].GetElementClassType() != typeof(CashBoardElement)) {
-                            board.elementsPositions[collum, row] = new BoardElement(board.elementsPositions[collum, row].GetAttachedGameObject(), board.elementsPositions[collum, row].GetTransformIndex(), Color.white);
+                            board.elementsPositions[collum, row] = new BoardElement(board.elementsPositions[collum, row].GetTransformIndex(), Vector4.One);
                         }
                         //board.elementsPositions[collum, row].OnElementDestruction(board);
                         board.matchedElemPositions[collum, row] = true;
@@ -687,9 +635,10 @@
         }
 
         public static int GetIfCashElement() {
-            int roll = Random.Range(0, 100);
-            for (int i = FixedElementData.cashElementsChances.Length - 1; i > -1; i--) {
-                if (roll <= FixedElementData.cashElementsChances[i]) {
+
+            int roll = random.Next(0, 100);
+            for (int i = ConstantValues.cashElementsChances.Length - 1; i > -1; i--) {
+                if (roll <= ConstantValues.cashElementsChances[i]) {
                     return i;
                 }
             }
@@ -788,13 +737,28 @@
             }
             return false;
         }
+
 #region Debug
-        public static void CheckIfElementAtPositionIsNull(int collum, int row, BoardElement[, ] positions) {
-#if UNITY_EDITOR
-            if (positions[collum, row] == null) {
-                Debug.LogError("Position: (" + collum + ", " + row + "), is null");
-            }
-#endif
-        }
+        //         public static void CheckIfElementAtPositionIsNull(int collum, int row, BoardElement[, ] positions) {
+        // #if UNITY_EDITOR
+        //             if (positions[collum, row] == null) {
+        //                 Debug.LogError("Position: (" + collum + ", " + row + "), is null");
+        //             }
+        // #endif
+        //         }
 #endregion
+        // public static Transform GetTransformByIndex(int[] indexInHierarchy) {
+
+        //     Transform trans = GameObject.Find("Canvas").transform;
+
+        //     for (int y = 0; y < indexInHierarchy.Length; y++) {
+        //         // Debug.Log(message.type);
+        //         // Debug.Log("index: " + y);
+        //         // Debug.Log(trans.name);
+        //         trans = trans.GetChild(indexInHierarchy[y]);
+        //     }
+        //     //Debug.Log("End");
+        //     return trans;
+
+        // }
     }

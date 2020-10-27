@@ -68,7 +68,7 @@
      <Compile Include="Assets\BoardScripts\DetailsManager.cs" />
      <Compile Include="Assets\BoardScripts\MoneyManager.cs" />
      <Compile Include="Assets\Client.cs" />
-     <Compile Include="Assets\FixedElementData.cs" />
+     <Compile Include="Assets\ConstantValues.cs" />
      <Compile Include="Assets\GraphBoardDepricated.cs" />
      <Compile Include="Assets\InteractionScripts\InputManager.cs" />
      <Compile Include="Assets\InteractionScripts\OnDragEvent.cs" />

@@ -12,7 +12,7 @@ public class AudioManager : MonoBehaviour {
     static Queue<Messages.AudioMessage> messagesToBePlayed = new Queue<Messages.AudioMessage>();
     static int[] IDsPlayingAtSourceArrayIndex = new int[sources.Length];
 
-    static List<int> IDsPlayed = new List<int>();
+    //static List<int> IDsPlayed = new List<int>();
 
     static bool isAudioPlaying = false;
     void Awake() {
@@ -27,7 +27,7 @@ public class AudioManager : MonoBehaviour {
 
     // Update is called once per frame
     void Update() {
-        if (messagesToBePlayed.Count > 0) {
+        if (messagesToBePlayed.Count > 0 && !Client.GetIfGameIsPaused()) {
             isAudioPlaying = true;
             PlayMessages();
         }
@@ -41,7 +41,6 @@ public class AudioManager : MonoBehaviour {
         if (sourceAvailable > -1) {
             Messages.AudioMessage msg = messagesToBePlayed.Dequeue();
             if (msg.messageID == -1000) {
-                IDsPlayed.Clear();
                 return;
             }
             PlayNextMessage(msg, sourceAvailable);
@@ -52,7 +51,7 @@ public class AudioManager : MonoBehaviour {
         int sourceAvailable = -1;
         for (int i = 0; i < sources.Length; i++) {
             if (!sources[i].isPlaying && IDsPlayingAtSourceArrayIndex[i] > -1) {
-                IDsPlayed.Add(IDsPlayingAtSourceArrayIndex[i]);
+                Client.AddProccessedMessageID(IDsPlayingAtSourceArrayIndex[i]);
                 IDsPlayingAtSourceArrayIndex[i] = -1;
                 sourceAvailable = i;
             }
@@ -65,7 +64,7 @@ public class AudioManager : MonoBehaviour {
     }
 
     private void PlayNextMessage(Messages.AudioMessage msg, int availableSoure) {
-        if (msg.dependencyID > -1 && !IDsPlayed.Contains(msg.dependencyID)) {
+        if (msg.dependencyID > -1 && !Client.GetPlayedMessagesIDs().Contains(msg.dependencyID)) {
             messagesToBePlayed.Enqueue(msg);
             PlayNextMessage(messagesToBePlayed.Dequeue(), availableSoure);
         }

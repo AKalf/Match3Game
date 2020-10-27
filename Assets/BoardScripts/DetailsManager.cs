@@ -40,7 +40,7 @@ public class DetailsManager : MonoBehaviour {
         swapCostText = detailsPanel.GetChild(2).GetComponent<Text>();
         for (int i = 0; i < scoreImageHistory.Length; i++) {
             scoreTextHistory[i] = "";
-            scoreImageHistory[i] = AssetLoader.GetSprite(FixedElementData.AvailableSprites.transparent);
+            scoreImageHistory[i] = AssetLoader.GetSprite(ConstantValues.AvailableSprites.transparent);
 
         }
         StartCoroutine(CloseInfoPanel());
@@ -89,17 +89,17 @@ public class DetailsManager : MonoBehaviour {
         swapCostText.text = "Swap cost: " + amount.ToString();
         Transform childrenLayoutHolder = instance.infoPanel.GetChild(0);
         for (int i = 0; i < childrenLayoutHolder.childCount; i++) {
-            childrenLayoutHolder.GetChild(i).GetChild(0).GetComponent<Text>().text = (FixedElementData.cashElementsValues[i] * amount * 100).ToString();
+            childrenLayoutHolder.GetChild(i).GetChild(0).GetComponent<Text>().text = (ConstantValues.cashElementsValues[i] * amount * 100).ToString();
         }
     }
 
     public void ToggleInfoPanel() {
         if (isInfoShown) {
-            Animations.AddAnimationMoveToPosition(-1, -1, infoPanel.transform, BoardManager.inst.GetSwappingSpeed(), -Vector3.right * infoPanel.rect.width);
+            Animations.AddAnimationMoveToPosition(-1, -1, infoPanel.GetComponent<RectTransform>(), ConstantValues.swappingSpeed, -Vector3.right * infoPanel.rect.width);
             isInfoShown = false;
         }
         else {
-            Animations.AddAnimationMoveToPosition(-1, -1, infoPanel.transform, BoardManager.inst.GetSwappingSpeed(), Vector3.zero);
+            Animations.AddAnimationMoveToPosition(-1, -1, infoPanel.GetComponent<RectTransform>(), ConstantValues.swappingSpeed, Vector3.zero);
             isInfoShown = true;
         }
     }

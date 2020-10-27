@@ -1,9 +1,10 @@
-﻿using System.Collections;
+﻿using System;
 using System.Collections.Generic;
-using UnityEngine;
-using UnityEngine.UI;
+using System.Numerics;
 
-public class BoardManager : MonoBehaviour {
+public class BoardManager : UnityEngine.MonoBehaviour {
+
+    Random random = new Random();
 
     private enum GameStep {
         WaitingInput,
@@ -17,44 +18,14 @@ public class BoardManager : MonoBehaviour {
 
     private GameStep currentStep = GameStep.WaitingInput;
 
-    [SerializeField]
-    private float swappingSpeed = 3.0f;
-    [SerializeField]
-    int totalCollums = 4;
-    [SerializeField]
-    int totalRows = 4;
-    [SerializeField]
-    int maxScoreAllowed = 25;
-    [SerializeField]
-    public Color highlightColor;
-    [SerializeField]
-    Transform cellsLocations = null;
-    [SerializeField]
-    Vector3[] posOnWorld;
-
-#region Panels
-    /// <summary> this.transform</summary>
-    Transform boardPanel = null;
-    /// <summary> holds score and other UI</summary>
-    Transform detailsPanel = null;
-    /// <summary> Holds cells</summary>
-    Transform gamePanel = null;
-#endregion
-
     /// <summary> The elements of the board. 0 dimension is collums, first dimension is rows</summary>
     public BoardElement[, ] elementsPositions = null;
     /// <summary> Flagged elements that create matches</summary>
     public bool[, ] matchedElemPositions = null;
-    /// <summary> Flagged destroyed elements, that need replacing</summary>
-    public bool[, ] positionsDestroyed = null;
-    public Vector3[, ] positionsOnWorld;
+    public bool[, ] possibleInput = null;
+    public bool[, ] changedPotitions = null;
 
 #region  Utility and holders
-    /// <summary> Helping transforms to create the drop effect</summary>
-    public RectTransform[] holders = null;
-    [SerializeField]
-    RectTransform holdersParent = null;
-
     /// <summary> Value holder for step1 to step2</summary>
     BoardElement firstElement = null;
     /// <summary> Value holder for step1 to step2</summary>
@@ -77,18 +48,11 @@ public class BoardManager : MonoBehaviour {
     public int currentMessageID = -1;
     void Awake() {
         inst = this;
-        boardPanel = this.transform;
-        detailsPanel = boardPanel.GetChild(0);
-        gamePanel = GameObject.Find("GamePanel").transform; //boardPanel.GetChild(1);
 
-        elementsPositions = new BoardElement[totalCollums, totalRows];
-        positionsOnWorld = new Vector3[totalCollums, totalRows];
-        matchedElemPositions = new bool[totalCollums, totalRows];
-        positionsDestroyed = new bool[totalCollums, totalRows];
-        holders = new RectTransform[holdersParent.childCount];
-        for (int i = 0; i < holders.Length; i++) {
-            holders[i] = holdersParent.GetChild(i).GetComponent<RectTransform>();
-        }
+        elementsPositions = new BoardElement[ConstantValues.totalCollums, ConstantValues.totalRows];
+        matchedElemPositions = new bool[ConstantValues.totalCollums, ConstantValues.totalRows];
+        possibleInput = new bool[ConstantValues.totalCollums, ConstantValues.totalRows];
+        changedPotitions = new bool[ConstantValues.totalCollums, ConstantValues.totalRows];
         // Debug
         //DebugCheckPanels();
 
@@ -98,61 +62,39 @@ public class BoardManager : MonoBehaviour {
         // Assign elements to the board
 
         // foreach gameobject child of gameobject "GamePanel"
-        for (int i = 0; i < gamePanel.childCount; i++) {
+        for (int i = 0; i < ConstantValues.totalCollums * ConstantValues.totalRows; i++) {
             // if in set bounds
-            if (collum < totalCollums && row < totalRows) {
-                posOnWorld = new Vector3[gamePanel.childCount];
+            if (collum < ConstantValues.totalCollums && row < ConstantValues.totalRows) {
 
                 // Get a random color
-                int newColorIndex = Random.Range(0, BoardFunctions.GetAvailableColors().Length);
-                Color newColor = BoardFunctions.GetAvailableColors() [newColorIndex];
+                int randomNum = random.Next(0, ConstantValues.GetAvailableColors().Length);
+
+                Vector4 newColor = ConstantValues.GetAvailableColors() [randomNum];
 
                 // Create a new BoardElement instance an assign it to positions board
-                elementsPositions[collum, row] = new BoardElement(gamePanel.GetChild(i).gameObject, new int[] { 1, i }, newColor);
+                elementsPositions[collum, row] = new BoardElement(new int[] { 0, 1, i }, newColor);
                 // new animation to show the default sprite on gameobject
                 currentMessageID += 1;
-                messagesToClient.Add(new Messages.AnimationMessage(currentMessageID, -1, Messages.AnimationMessage.AnimationMessageTypes.ChangeSprite, elementsPositions[collum, row].GetImageTransformIndex(), (int) FixedElementData.AvailableSprites.defaultElement, newColor));
+                messagesToClient.Add(new Messages.AnimationMessage(currentMessageID, -1, Messages.AnimationMessage.AnimationMessageTypes.ChangeSprite, elementsPositions[collum, row].GetImageTransformIndex(), (int) ConstantValues.AvailableSprites.defaultElement, newColor));
+                changedPotitions[collum, row] = true;
                 collum++;
                 // fix collum index
-                if (collum == totalCollums) {
+                if (collum == ConstantValues.totalCollums) {
                     row++;
                     collum = 0;
                 }
             }
             else {
-                Debug.LogError("There are more transforms on the board than collums * rows");
+                UnityEngine.Debug.LogError("There are more transforms on the board than collums * rows");
             }
 
         }
         AddWaitMessage();
         SendMessagesToClient();
     }
-    IEnumerator CoWaitForPosition() {
-        yield return new WaitForEndOfFrame();
-        int i = 0;
-        for (int row = 0; row < elementsPositions.GetLength(1); row++) {
-            for (int collum = 0; collum < elementsPositions.GetLength(0); collum++) {
-                positionsOnWorld[collum, row] = elementsPositions[collum, row].GetAttachedGameObject().GetComponent<RectTransform>().anchoredPosition;
-                posOnWorld[i] = positionsOnWorld[collum, row];
-                i++;
-            }
-        }
-    }
 
     // Start is called before the first frame update
     void Start() {
-        // Assign color values to elemets
-        //int currentScore = 0;
-
-        bool hasPotentialInputs = false;
-        for (int row = 0; row < elementsPositions.GetLength(1); row++) {
-            for (int collum = 0; collum < elementsPositions.GetLength(0); collum++) {
-                if (BoardFunctions.IsPotentialInput(collum, row, elementsPositions, matchedElemPositions, totalCollums, totalRows) > 0 && !hasPotentialInputs) {
-                    hasPotentialInputs = true;
-                }
-            }
-        }
-        StartCoroutine("CoWaitForPosition");
         currentStep = GameStep.CheckingBoardForMatches;
     }
 
@@ -165,28 +107,45 @@ public class BoardManager : MonoBehaviour {
         switch (currentStep) {
             case GameStep.WaitingInput:
                 //OnDragEvent.hasDragBegin = false;
+
                 break;
 
                 // Step1: check if input create matches and if true move to step2
             case GameStep.CheckingInput:
-                AlexDebugger.GetInstance().AddMessage("Entering Step1: -check if input between-" + firstElement.GetAttachedGameObject().transform.name + " and " + secondElement.GetAttachedGameObject().transform.name + " create matches", AlexDebugger.tags.Step1);
+                BoardFunctions.SwapElements(firstElement, secondElement, this, rewire : false, ConstantValues.swappingSpeed / 2);
                 //Debug.Log("Checking for matches based on input");
-
                 // check if input create matches
                 if (HandleInputForElement(firstElement, secondElement)) {
-                    HandleInputForElement(secondElement, firstElement);
-                    AlexDebugger.GetInstance().AddMessage("Step1 finished with matches, going to Step2: -play effects for matched elements-, input1:" + firstElement.GetAttachedGameObject().transform.name + ", input2: " + secondElement.GetAttachedGameObject().transform.name, AlexDebugger.tags.Step1);
+                    if (firstElement.GetElementClassType() != typeof(BellBoardElement)) {
+                        HandleInputForElement(secondElement, firstElement);
+                    }
+                    //AlexDebugger.GetInstance().AddMessage("Step1 finished with matches, going to Step2: -play effects for matched elements-, input1:" + firstElement.GetAttachedGameObject().transform.name + ", input2: " + secondElement.GetAttachedGameObject().transform.name, AlexDebugger.tags.Step1);
+                    // Remove tokens
+                    MoneyManager.ChangeBalanceBy(-MoneyManager.GetSwapCost());
+                    // Swap the elements on the board
+                    // Allow Update() to check if matches are created
                     AddWaitMessage();
+                    currentMessageID += 1;
+                    Server.GetServerInstance().SendMessageToClient(new Messages.ServerStatusMessage(currentMessageID, -1, false));
                     currentStep = GameStep.PlayingEffects;
                 }
                 else if (HandleInputForElement(secondElement, firstElement)) {
-                    AlexDebugger.GetInstance().AddMessage("Step1 finished with matches, going to Step2: -play effects for matched elements-, input1:" + firstElement.GetAttachedGameObject().transform.name + ", input2: " + secondElement.GetAttachedGameObject().transform.name, AlexDebugger.tags.Step1);
+                    //AlexDebugger.GetInstance().AddMessage("Step1 finished with matches, going to Step2: -play effects for matched elements-, input1:" + firstElement.GetAttachedGameObject().transform.name + ", input2: " + secondElement.GetAttachedGameObject().transform.name, AlexDebugger.tags.Step1);
+                    // Remove tokens
+                    MoneyManager.ChangeBalanceBy(-MoneyManager.GetSwapCost());
+                    // Swap the elements on the board
                     AddWaitMessage();
+                    Server.GetServerInstance().SendMessageToClient(new Messages.ServerStatusMessage(currentMessageID, -1, false));
+
                     currentStep = GameStep.PlayingEffects;
                 }
                 else {
+                    BoardFunctions.SwapElements(firstElement, secondElement, this, rewire : false);
+                    AddWaitMessage();
                     AlexDebugger.GetInstance().AddMessage("No matches found, when finish, go back to step0: -waiting for input-", AlexDebugger.tags.Step1);
                     SendMessagesToClient();
+                    currentMessageID += 1;
+                    Server.GetServerInstance().SendMessageToClient(new Messages.ServerStatusMessage(currentMessageID, -1, true));
                     currentStep = GameStep.WaitingInput;
                 }
                 firstElement = null;
@@ -224,7 +183,7 @@ public class BoardManager : MonoBehaviour {
             case GameStep.CheckingBoardForMatches:
                 AlexDebugger.GetInstance().AddMessage("Entering Step5: -Aftermatch-", AlexDebugger.tags.Step5);
                 //Debug.Log("### AfterMatch ### Checking board for combos");
-                int newTotalMatches = BoardFunctions.CheckBoardForMatches(elementsPositions, ref matchedElemPositions, totalCollums, totalRows);
+                int newTotalMatches = CheckBoardForMatches();
                 // Go back to step2
                 if (newTotalMatches > 0) {
                     //Debug.Log("### AfterMatch ### Total new matches found: " + newTotalMatches);
@@ -242,14 +201,18 @@ public class BoardManager : MonoBehaviour {
             case GameStep.MarkingPossibleInputs:
                 //Debug.Log("### AfterMatch ### No new matches found");
                 if (!CheckForPossibleInputs()) {
+                    currentMessageID += 1;
+                    messagesToClient.Add(new Messages.AnimationMessage.PopBoxMessage(currentMessageID, currentMessageID - 1, "No possible inputs found. Regenerating board.", -1));
                     //Debug.Log("### AfterMatch ### No possible inputs found, re-generating board");
-                    AlexDebugger.GetInstance().AddMessage("No potential input found, all elements are flagged as destroyed", AlexDebugger.tags.Step5);
+                    //AlexDebugger.GetInstance().AddMessage("No potential input found, all elements are flagged as destroyed", AlexDebugger.tags.Step5);
                     MarkAllElementsAsDestroyed();
-                    AlexDebugger.GetInstance().AddMessage("Step5 -Aftermatch- has finished, with state -No available input-,  moving to Step4 -Replace destroyed elements-", AlexDebugger.tags.Step5);
+                    //AlexDebugger.GetInstance().AddMessage("Step5 -Aftermatch- has finished, with state -No available input-,  moving to Step4 -Replace destroyed elements-", AlexDebugger.tags.Step5);
                     currentStep = GameStep.GeneratingElements;
                 }
                 else {
                     AlexDebugger.GetInstance().AddMessage("Step5 -Aftermatch- has finished, with state -Has available input-,  moving to Step0 -Wait for input-", AlexDebugger.tags.Step5);
+                    currentMessageID += 1;
+                    Server.GetServerInstance().SendMessageToClient(new Messages.ServerStatusMessage(currentMessageID, -1, true));
                     currentStep = GameStep.WaitingInput;
                 }
                 AddWaitMessage();
@@ -262,35 +225,35 @@ public class BoardManager : MonoBehaviour {
         return inst;
     }
 
-    public static BoardManager GetNewBoardManager() {
-        BoardManager newBoard = GetInstance().transform.gameObject.AddComponent<BoardManager>();
-        return newBoard;
-    }
-
     /// <summary>Receives input from client and handles it</summary>
     public void TakeInput(int firstElementIndexAtParent, int secondElementIndexAtParent) {
         // find first element based on gamePanel's child index
         firstElement = BoardFunctions.GetElementBasedOnParentIndex(elementsPositions, firstElementIndexAtParent);
         // find second element based on gamePanel's child index
         secondElement = BoardFunctions.GetElementBasedOnParentIndex(elementsPositions, secondElementIndexAtParent);
+        currentStep = GameStep.CheckingInput;
 
-        // Check if elements are neighbours thus input correct
-        // TO-DO: make it to check if it is a possible mathch
-        if (BoardFunctions.GetIfNeighbours(firstElement, secondElement, elementsPositions)) {
-            AlexDebugger.GetInstance().AddMessage("Correct input: " + firstElement.GetAttachedGameObject().transform.name + ", with " + secondElement.GetAttachedGameObject().transform.name, AlexDebugger.tags.Input);
-            // Remove tokens
-            MoneyManager.ChangeBalanceBy(-MoneyManager.GetSwapCost());
-            // Swap the elements on the board
-            BoardFunctions.SwapElements(firstElement, secondElement, this, rewire : false);
-            // Allow Update() to check if matches are created
-            currentStep = GameStep.CheckingInput;
-        }
-        else {
-            // Swap elements, on rewire mode
-            BoardFunctions.SwapElements(firstElement, secondElement, this, rewire : true);
-        }
-        // Send animations to client and empty list
-        AddWaitMessage();
+#region  Debug
+        //  To use for cheats
+        // if (BoardFunctions.GetIfNeighbours(firstElement, secondElement, elementsPositions)) {
+        //     AlexDebugger.GetInstance().AddMessage("Correct input: " + BoardFunctions.GetTransformByIndex(firstElement.GetTransformIndex()) + ", with " + BoardFunctions.GetTransformByIndex(secondElement.GetTransformIndex()), AlexDebugger.tags.Input);
+        //     // Remove tokens
+        //     MoneyManager.ChangeBalanceBy(-MoneyManager.GetSwapCost());
+        //     // Swap the elements on the board
+        //     BoardFunctions.SwapElements(firstElement, secondElement, this, rewire : false, FixedElementData.swappingSpeed / 2);
+        //     // Allow Update() to check if matches are created
+
+        // }
+        // else {
+        //     // Swap elements, on rewire mode
+        //     BoardFunctions.SwapElements(firstElement, secondElement, this, rewire : true);
+        //     AddWaitMessage();
+        //     SendMessagesToClient();
+        //     currentMessageID += 1;
+        //     Server.GetServerInstance().SendMessageToClient(new Messages.ServerStatusMessage(currentMessageID, -1, true));
+
+        // }
+#endregion
     }
 
     private bool PlayEffectsStep() {
@@ -322,10 +285,12 @@ public class BoardManager : MonoBehaviour {
 
     private void ReorientElements() {
         bool hasSFXplayed = false;
-        for (int collum = 0; collum < totalCollums; collum++) {
+        for (int collum = 0; collum < ConstantValues.totalCollums; collum++) {
             //AlexDebugger.GetInstance().AddMessage("Moving element: " + elementsPositions[collum, row].GetAttachedGameObject().transform.name + " upwards", AlexDebugger.tags.Step3);
-            if (BoardFunctions.MoveMatchedElementUpwards(collum, totalRows - 1, this) && !hasSFXplayed) {
-                messagesToClient.Add(new Messages.AudioMessage(AssetLoader.GetCellDropSFX(), messagesToClient.Count, -1, 0.0f, Random.Range(0.5f, 2.0f)));
+            if (BoardFunctions.MoveMatchedElementUpwards(collum, ConstantValues.totalRows - 1, this) && !hasSFXplayed) {
+                float randomNum = random.Next(5, 20) / 10;
+                currentMessageID += 1;
+                messagesToClient.Add(new Messages.AudioMessage(AssetLoader.GetCellDropSFX(), currentMessageID, currentMessageID - 1, 0.0f, 1));
                 hasSFXplayed = true;
             }
 
@@ -333,25 +298,63 @@ public class BoardManager : MonoBehaviour {
     }
 
     private void GenerateNewElemetns() {
-        messagesToClient.Add(new Messages.AudioMessage(AssetLoader.GetCellDropSFX(), messagesToClient.Count, -1, 0.15f, Random.Range(0.5f, 2.0f)));
-        bool[, ] searchedElements = new bool[positionsDestroyed.GetLength(0), positionsDestroyed.GetLength(1)];
+
+        bool[, ] searchedElements = new bool[matchedElemPositions.GetLength(0), matchedElemPositions.GetLength(1)];
         for (int row = 0; row < elementsPositions.GetLength(1); row++) {
             for (int collum = 0; collum < elementsPositions.GetLength(0); collum++) {
-                if (positionsDestroyed[collum, row] == true) {
+                if (matchedElemPositions[collum, row] == true) {
                     BoardFunctions.ReplaceElementAnimations(collum, row, this, ref searchedElements);
-                    positionsDestroyed[collum, row] = false;
+                    matchedElemPositions[collum, row] = false;
+                    changedPotitions[collum, row] = true;
 
                 }
             }
         }
+        float randomNum = random.Next(5, 20) / 10;
+        currentMessageID += 1;
+        messagesToClient.Add(new Messages.AudioMessage(AssetLoader.GetCellDropSFX(), currentMessageID, currentMessageID - 1, 0.0f, 1));
+
     }
+
+    /// <summary>Checks each element on the board for matches and flags them</summary>
+    public int CheckBoardForMatches() {
+        AlexDebugger.GetInstance().AddMessage("Checking board for new matches...", AlexDebugger.tags.Aftermatch);
+        int totalMatches = 0;
+        // Search for matches and flag them
+        for (int row = 0; row < elementsPositions.GetLength(1); row++) {
+            for (int collum = 0; collum < elementsPositions.GetLength(0); collum++) {
+                // case of cash element has reached bottom
+                if (row == elementsPositions.GetLength(1) - 1 && elementsPositions[collum, row].GetElementClassType() == typeof(CashBoardElement)) {
+                    matchedElemPositions[collum, row] = true;
+                    AlexDebugger.GetInstance().AddMessage("A cash element has reached bottom at position: " + collum + ", " + row, AlexDebugger.tags.Aftermatch);
+                    totalMatches++;
+                }
+                else if (matchedElemPositions[collum, row] == true || !changedPotitions[collum, row]) {
+                    continue;
+                }
+                else {
+                    totalMatches += BoardFunctions.CheckElementForMatches(collum, row, elementsPositions, ref matchedElemPositions, ConstantValues.totalCollums, ConstantValues.totalRows, true);
+                }
+            }
+
+        }
+        return totalMatches;
+
+    }
+
     private bool CheckForPossibleInputs() {
         bool hasPossibleInput = false;
         for (int row = 0; row < elementsPositions.GetLength(1); row++) {
             for (int collum = 0; collum < elementsPositions.GetLength(0); collum++) {
-                if (BoardFunctions.IsPotentialInput(collum, row, elementsPositions, matchedElemPositions, totalCollums, totalRows) > 0) {
-                    //
-                    AlexDebugger.GetInstance().AddMessage(elementsPositions[collum, row].GetAttachedGameObject() + " is potential input", AlexDebugger.tags.Step5);
+                changedPotitions[collum, row] = false;
+                if (elementsPositions[collum, row].GetElementClassType() == typeof(CashBoardElement)) {
+                    continue;
+                }
+                else if (elementsPositions[collum, row].GetElementClassType() == typeof(BombBoardElement) || elementsPositions[collum, row].GetElementClassType() == typeof(BellBoardElement)) {
+                    hasPossibleInput = true;
+                }
+                else if (BoardFunctions.IsPotentialInput(collum, row, elementsPositions, matchedElemPositions, ConstantValues.totalCollums, ConstantValues.totalRows) > 0) {
+                    //AlexDebugger.GetInstance().AddMessage(BoardFunctions.GetTransformByIndex(elementsPositions[collum, row].GetTransformIndex()) + " is potential input", AlexDebugger.tags.Step5);
                     BoardFunctions.ToggleHighlightCell(collum, row, this, true);
                     hasPossibleInput = true;
                 }
@@ -362,22 +365,27 @@ public class BoardManager : MonoBehaviour {
         }
         return hasPossibleInput;
     }
+
     private void MarkAllElementsAsDestroyed() {
         for (int row = 0; row < elementsPositions.GetLength(1); row++) {
             for (int collum = 0; collum < elementsPositions.GetLength(0); collum++) {
-                positionsDestroyed[collum, row] = true;
+                matchedElemPositions[collum, row] = true;
             }
         }
     }
+
     public bool HandleInputForElement(BoardElement element, BoardElement otherElement) {
         bool areThereMatches = false;
-        if (element.GetElementClassType() == typeof(BombBoardElement)) {
+        if (element.GetElementClassType() == typeof(CashBoardElement) || otherElement.GetElementClassType() == typeof(CashBoardElement)) {
+            return false;
+        }
+        else if (element.GetElementClassType() == typeof(BombBoardElement)) {
             if (otherElement.GetElementClassType() == typeof(CrossBoardElement)) {
-                AlexDebugger.GetInstance().AddMessage(element.GetAttachedGameObject() + " bomb style set to cross", AlexDebugger.tags.Step1);
+                //AlexDebugger.GetInstance().AddMessage(BoardFunctions.GetTransformByIndex(element.GetTransformIndex()) + " bomb style set to cross", AlexDebugger.tags.Step1);
                 ((BombBoardElement) element).SetExplosionStyleTo(BombBoardElement.BombExplosionStyle.CrossStyle);
             }
             else if (otherElement.GetElementClassType() == typeof(BombBoardElement)) {
-                AlexDebugger.GetInstance().AddMessage(element.GetAttachedGameObject() + " bomb style set to double bomb", AlexDebugger.tags.Step1);
+                //AlexDebugger.GetInstance().AddMessage(BoardFunctions.GetTransformByIndex(element.GetTransformIndex()) + " bomb style set to double bomb", AlexDebugger.tags.Step1);
                 ((BombBoardElement) element).SetExplosionStyleTo(BombBoardElement.BombExplosionStyle.DoubleBombStyle);
             }
             element.OnElementDestruction(this);
@@ -391,7 +399,7 @@ public class BoardManager : MonoBehaviour {
         }
         else {
             KeyValuePair<int, int> firstPosition = BoardFunctions.GetBoardPositionOfElement(element, elementsPositions);
-            int numberOfMatchesForFirst = BoardFunctions.CheckElementForMatches(firstPosition.Key, firstPosition.Value, elementsPositions, ref matchedElemPositions, totalCollums, totalRows, true);
+            int numberOfMatchesForFirst = BoardFunctions.CheckElementForMatches(firstPosition.Key, firstPosition.Value, elementsPositions, ref matchedElemPositions, ConstantValues.totalCollums, ConstantValues.totalRows, true);
             // if there are matches
             if (numberOfMatchesForFirst > 0) {
                 AlexDebugger.GetInstance().AddMessage("Matches found for first element " + numberOfMatchesForFirst + ", go to step2: -play effects for matched elements-", AlexDebugger.tags.Step1);
@@ -409,17 +417,9 @@ public class BoardManager : MonoBehaviour {
     }
 
     public void SendMessagesToClient() {
-        Client.ReceiveMessagesFromServer(messagesToClient);
+        Server.GetServerInstance().SendMessagesToClient(messagesToClient);
+        currentMessageID = -1;
         messagesToClient.Clear();
-    }
-    /// <summary>Is boardManager available</summary>
-    public bool IsAvailable() {
-        if (currentStep == GameStep.WaitingInput && !areAnimationsPlaying) {
-            return true;
-        }
-        else {
-            return false;
-        }
     }
 
     public GameClient GetClientAttached() {
@@ -430,44 +430,40 @@ public class BoardManager : MonoBehaviour {
             attachedClient = clientToAttach;
         }
         else {
-            Debug.LogWarning("Trying to attach client but client has already been attached");
+            //Debug.LogWarning("Trying to attach client but client has already been attached");
         }
-    }
-
-    public float GetSwappingSpeed() {
-        return swappingSpeed;
     }
 
     /// Debug
-    private void DebugElementsMatches(List<BoardElement> elements) {
-        if (elements.Count > 0) {
-            string d = "";
-            foreach (BoardElement e in elements) {
-                d += e.GetAttachedGameObject().name + ", ";
-            }
-            AlexDebugger.GetInstance().AddMessage(d, AlexDebugger.tags.Matches);
-            Debug.Log(d + ", Matches");
-        }
-    }
-    private void DebugCheckPanels() {
-#if UNITY_EDITOR
-        if (detailsPanel.gameObject.name != "DetailsPanel") {
-            Debug.LogError(boardPanel.gameObject.name + ".GetChild(0).name != DetailsPanel");
-        }
-        if (gamePanel.gameObject.name != "GamePanel") {
-            Debug.LogError(boardPanel.gameObject.name + ".GetChild(1).name != GamePanel");
-        }
-        else {
-            for (int i = 0; i < gamePanel.childCount; i++) {
-                if (gamePanel.GetChild(i).GetComponent<UnityEngine.UI.Image>() == null) {
-                    Debug.LogError(gamePanel.GetChild(i).name + " has no Image component");
-                    gamePanel.GetChild(i).gameObject.AddComponent<UnityEngine.UI.Image>();
-                }
+    //     private void DebugElementsMatches(List<BoardElement> elements) {
+    //         if (elements.Count > 0) {
+    //             string d = "";
+    //             foreach (BoardElement e in elements) {
+    //                 d += e.GetAttachedGameObject().name + ", ";
+    //             }
+    //             AlexDebugger.GetInstance().AddMessage(d, AlexDebugger.tags.Matches);
+    //             Debug.Log(d + ", Matches");
+    //         }
+    //     }
+    //     private void DebugCheckPanels() {
+    // #if UNITY_EDITOR
+    // if (detailsPanel.gameObject.name != "DetailsPanel") {
+    //     Debug.LogError(boardPanel.gameObject.name + ".GetChild(0).name != DetailsPanel");
+    // }
+    // if (gamePanel.gameObject.name != "GamePanel") {
+    //     Debug.LogError(boardPanel.gameObject.name + ".GetChild(1).name != GamePanel");
+    // }
+    // else {
+    //     for (int i = 0; i < gamePanel.childCount; i++) {
+    //         if (gamePanel.GetChild(i).GetComponent<UnityEngine.UI.Image>() == null) {
+    //             Debug.LogError(gamePanel.GetChild(i).name + " has no Image component");
+    //             gamePanel.GetChild(i).gameObject.AddComponent<UnityEngine.UI.Image>();
+    //         }
 
-            }
-        }
+    //     }
+    // }
 
-#endif
-    }
+    // #endif
+    //     }
 
 }

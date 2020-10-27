@@ -18,11 +18,29 @@ public class Server {
     }
 
     public void AcceptClient() {
-        clients.Add(new GameClient(BoardManager.GetNewBoardManager()));
+
     }
 
-    public void SendMessageToClientNewAnimationsMessages(List<Messages.AnimationMessage> messages, GameClient client) {
+    public void ReceiveInputMessage(string json) {
+
+    }
+    public void ReceiveInputMessage(int firstInputIndex, int secondInputIndex) {
+        BoardManager.inst.TakeInput(firstInputIndex, secondInputIndex);
+    }
+
+    public void SendMessagesToClient(List<Messages> messages, GameClient client) {
         // TO-DO: Serialize messages to json/binary and actually send them
+        //
+    }
+    public void SendMessagesToClient(List<Messages> messages) {
+        // TO-DO: Serialize messages to json/binary and actually send them
+        Client.ReceiveMessagesFromServer(messages);
+
+    }
+    public void SendMessageToClient(Messages message) {
+        // TO-DO: Serialize messages to json/binary and actually send them
+        Client.ReceiveMessagesFromServer(message);
+
     }
 
     public void SendMessageToClientChangeBalanceTo(float newAmount, GameClient client) {
@@ -35,6 +53,9 @@ public class Server {
         DetailsManager.ChangeSwapCostTo(newSwapCost);
     }
 
+    public void SendMessageToClientServerAvailability(bool isAvailable) {
+
+    }
 }
 public class GameClient {
     BoardManager gameInstance;
